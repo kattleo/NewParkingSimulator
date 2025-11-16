@@ -94,9 +94,30 @@ void screen_present(const Screen *s, int step)
             char c = s->buffer[y][x];
             switch (c)
             {
+            case '_':
+                printf("─");
+                break; // horizontal wall
+            case '|':
+                printf("│");
+                break; // vertical wall
+            case 'R':
+                printf("┌");
+                break; // top-left corner
+            case 'T':
+                printf("┐");
+                break; // top-right corner
+            case 'L':
+                printf("└");
+                break; // bottom-left corner
+            case 'J':
+                printf("┘");
+                break; // bottom-right corner
+            case '+':
+                printf("┼");
+                break; // intersection (optional)
             case '*':
-                printf("\033[90m*\033[0m"); // gray path
-                break;
+                printf("\033[90m*\033[0m");
+                break; // gray path
             default:
                 putchar(c);
                 break;

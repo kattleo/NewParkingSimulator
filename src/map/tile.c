@@ -21,7 +21,6 @@ Tile tile_from_char(char c)
     }
     else
     {
-        tile.symbol = ' ';
         tile.type = TILE_EMPTY;
     }
 
