@@ -4,22 +4,26 @@ Tile tile_from_char(char c)
 {
     Tile tile;
     tile.symbol = c;
-    switch (c)
+
+    if (c >= '1' && c <= '9')
     {
-    case '_':
+        tile.type = TILE_EMPTY;
+        tile.symbol = ' ';
+    }
+    else if (c == '_' || c == '|')
+    {
         tile.type = TILE_WALL;
-        break;
-    case '|':
-        tile.type = TILE_WALL;
-        break;
-    case 'P':
+    }
+    else if (c == 'P')
+    {
         tile.symbol = ' ';
         tile.type = TILE_PARKING;
-        break;
-    default:
+    }
+    else
+    {
         tile.symbol = ' ';
         tile.type = TILE_EMPTY;
-        break;
     }
+
     return tile;
 }

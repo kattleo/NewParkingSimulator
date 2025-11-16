@@ -86,9 +86,44 @@ void screen_present(const Screen *s, int step)
 {
     clear_screen();
     printf("Step: %d\n", step);
+
     for (int y = 0; y < s->height; ++y)
     {
-        fwrite(s->buffer[y], 1, s->width, stdout);
+        for (int x = 0; x < s->width; ++x)
+        {
+            char c = s->buffer[y][x];
+            switch (c)
+            {
+            case '*':
+                printf("\033[90m*\033[0m"); // gray path
+                break;
+            default:
+                putchar(c);
+                break;
+            }
+        }
         putchar('\n');
+    }
+}
+
+void screen_draw_paths(Screen *s, const VehicleList *vehicles)
+{
+    for (VehicleNode *node = vehicles->head; node != NULL; node = node->next)
+    {
+        const Vehicle *v = &node->vehicle;
+        if (v->path.length <= 0)
+            continue;
+
+        for (int i = v->path_index; i < v->path.length; ++i)
+        {
+            int px = v->path.steps[i].x;
+            int py = v->path.steps[i].y;
+
+            if (px >= 0 && px < s->width && py >= 0 && py < s->height)
+            {
+                if (s->buffer[py][px] == ' ')
+                    s->buffer[py][px] = '*';
+            }
+        }
     }
 }

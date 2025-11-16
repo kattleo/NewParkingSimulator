@@ -19,6 +19,7 @@ bool map_load(Map *map, const char *filename)
     char *lines[MAX_TEMP_LINES];
     int num_lines = 0;
     int width = 0;
+    map->waypoint_count = 0;
 
     // Read all lines into temporary array to determine dimensions
     char buffer[MAX_LINE_LEN];
@@ -108,8 +109,28 @@ bool map_load(Map *map, const char *filename)
             {
                 c = line[x];
             }
-            /* tile_from_char returns an int; store its character value into the Tile.symbol */
-            map->tiles[y][x] = tile_from_char(c);
+
+            Tile t = tile_from_char(c);
+
+            // waypoint detection
+            if (c >= '1' && c <= '9')
+            {
+                int id = c - '0';
+
+                t.is_waypoint = true;
+                t.waypoint_id = id;
+
+                if (map->waypoint_count < MAX_WAYPOINTS)
+                {
+                    map->waypoints[map->waypoint_count].id = id;
+                    map->waypoints[map->waypoint_count].x = x;
+                    map->waypoints[map->waypoint_count].y = y;
+                    map->waypoint_count++;
+                }
+            }
+
+            // store tile
+            map->tiles[y][x] = t;
         }
     }
 
@@ -167,4 +188,16 @@ void map_print(const Map *map)
         }
         putchar('\n');
     }
+}
+
+const Waypoint *map_get_waypoint_by_id(const Map *map, int id)
+{
+    for (int i = 0; i < map->waypoint_count; ++i)
+    {
+        if (map->waypoints[i].id == id)
+        {
+            return &map->waypoints[i];
+        }
+    }
+    return NULL;
 }

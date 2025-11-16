@@ -4,8 +4,9 @@
 
 #include "map/map.h"
 #include "vehicle/vehicle.h"
-#include "render/render.h"
 #include "vehicle/vehicle_list.h"
+#include "render/render.h"
+#include "traffic/traffic.h"
 
 bool assets_init(Map *map)
 {
@@ -38,53 +39,37 @@ int main(void)
         return 1;
     }
 
-    // Init Vehicle List
-    Vehicle v1, v2;
-    vehicle_init(&v1, 10, 1, DIR_EAST);
-    vehicle_init(&v2, 5, 5, DIR_SOUTH);
-
-    Path p1, p2;
-    path_init(&p1);
-    path_init(&p2);
-
-    // Simple mock paths
-    p1.length = 3;
-    p1.steps[0] = (PathStep){10, 1};
-    p1.steps[1] = (PathStep){11, 1};
-    p1.steps[2] = (PathStep){12, 1};
-
-    p2.length = 3;
-    p2.steps[0] = (PathStep){5, 5};
-    p2.steps[1] = (PathStep){5, 4};
-    p2.steps[2] = (PathStep){5, 3};
-
-    vehicle_set_path(&v1, &p1);
-    vehicle_set_path(&v2, &p2);
-
     VehicleList vehicles;
-    vehicle_list_push_back(&vehicles, &v1);
-    vehicle_list_push_back(&vehicles, &v2);
+    vehicle_list_init(&vehicles);
 
-    for (int step = 0; step < 50; ++step)
+    // Example: two cars starting at same position
+    Vehicle v1;
+    vehicle_init(&v1, 133, 27, DIR_EAST);
+
+    vehicle_list_push_back(&vehicles, &v1);
+
+    // Let traffic module set route & initial paths to waypoints
+    traffic_init_routes_waypoints(&vehicles, &map);
+
+    // Game loop
+    for (int step = 0; step < 500; ++step)
     {
-        // Get screen from static map
+        // 1) Static background
         screen_from_map(&screen, &map);
 
-        // Draw all vehicles to screen
+        screen_draw_paths(&screen, &vehicles);
+
+        // 2) Vehicles
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next)
         {
             screen_draw_vehicle(&screen, &node->vehicle, &map);
         }
 
-        // Render screen
+        // 3) Present
         screen_present(&screen, step);
 
-        // Update all vehicles
-        for (VehicleNode *node = vehicles.head; node != NULL; node = node->next)
-        {
-            // Move, collision detection, etc.
-            vehicles_update_all(&vehicles, &map);
-        }
+        // 4) One traffic simulation step (move + path replanning)
+        traffic_step(&vehicles, &map);
 
         usleep(150000);
     }

@@ -238,9 +238,5 @@ void vehicles_update_all(VehicleList *list, Map *map)
     }
 
     // Free occupancy grid
-    for (int y = 0; y < mapHeight; ++y)
-    {
-        free(occupied[y]);
-    }
     free(occupied);
 }

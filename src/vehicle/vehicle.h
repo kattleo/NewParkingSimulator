@@ -4,6 +4,8 @@
 #include "../map/map.h"
 #include "../path/path.h"
 
+#define MAX_ROUTE_WAYPOINTS 16
+
 typedef enum
 {
     DIR_NORTH,
@@ -35,9 +37,15 @@ typedef struct
     Direction dir;
     const VehicleSprites *sprites; // pointer to shared sprites
 
+    // Car follows route across waypoints
+    // It reaches every waypoint with a path
     Path path;
     int path_index; // index of next step in path
     int has_path;
+
+    int route[MAX_ROUTE_WAYPOINTS]; // sequence of waypoint IDs
+    int route_length;
+    int route_pos; // index into route[]
 } Vehicle;
 
 // Initialize global/default vehicle sprites from 4 txt files

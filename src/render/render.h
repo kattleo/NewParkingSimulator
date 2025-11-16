@@ -3,6 +3,7 @@
 
 #include "../map/map.h"
 #include "../vehicle/vehicle.h"
+#include "../vehicle/vehicle_list.h"
 
 typedef struct
 {
@@ -25,5 +26,7 @@ void screen_draw_vehicle(Screen *s, const Vehicle *v, const Map *map);
 
 // Present buffer to terminal
 void screen_present(const Screen *s, int step);
+
+void screen_draw_paths(Screen *s, const VehicleList *vehicles);
 
 #endif // RENDER_H

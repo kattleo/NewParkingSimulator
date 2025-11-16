@@ -157,6 +157,9 @@ void vehicle_init(Vehicle *v, int x, int y, Direction dir)
     path_init(&v->path);
     v->path_index = 0;
     v->has_path = 0;
+
+    v->route_length = 0;
+    v->route_pos = 0;
 }
 
 void vehicle_set_path(Vehicle *v, const Path *p)
