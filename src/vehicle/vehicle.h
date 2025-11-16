@@ -2,6 +2,7 @@
 #define VEHICLE_H
 
 #include "../map/map.h"
+#include "../path/path.h"
 
 typedef enum
 {
@@ -33,6 +34,10 @@ typedef struct
     int y;
     Direction dir;
     const VehicleSprites *sprites; // pointer to shared sprites
+
+    Path path;
+    int path_index; // index of next step in path
+    int has_path;
 } Vehicle;
 
 // Initialize global/default vehicle sprites from 4 txt files
@@ -43,10 +48,9 @@ const VehicleSprites *vehicle_sprites_get_default(void);
 // Initialize a vehicle at (x, y) with direction and glyph (e.g. 'C')
 void vehicle_init(Vehicle *v, int x, int y, Direction dir);
 
-// Move vehicle one step in its current direction if the map allows it
-void vehicle_update(Vehicle *v, const Map *map);
-
 // Get Sprite according to vehicle direction
 const Sprite *vehicle_get_sprite(const Vehicle *v);
+
+void vehicle_set_path(Vehicle *v, const Path *p);
 
 #endif

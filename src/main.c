@@ -39,15 +39,29 @@ int main(void)
     }
 
     // Init Vehicle List
-    VehicleList vehicles;
-    vehicle_list_init(&vehicles);
-
-    // Create some sample cars
     Vehicle v1, v2;
     vehicle_init(&v1, 10, 1, DIR_EAST);
-    vehicle_init(&v2, 30, 1, DIR_WEST);
+    vehicle_init(&v2, 5, 5, DIR_SOUTH);
 
-    // Add them to the list
+    Path p1, p2;
+    path_init(&p1);
+    path_init(&p2);
+
+    // Simple mock paths
+    p1.length = 3;
+    p1.steps[0] = (PathStep){10, 1};
+    p1.steps[1] = (PathStep){11, 1};
+    p1.steps[2] = (PathStep){12, 1};
+
+    p2.length = 3;
+    p2.steps[0] = (PathStep){5, 5};
+    p2.steps[1] = (PathStep){5, 4};
+    p2.steps[2] = (PathStep){5, 3};
+
+    vehicle_set_path(&v1, &p1);
+    vehicle_set_path(&v2, &p2);
+
+    VehicleList vehicles;
     vehicle_list_push_back(&vehicles, &v1);
     vehicle_list_push_back(&vehicles, &v2);
 
@@ -68,6 +82,7 @@ int main(void)
         // Update all vehicles
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next)
         {
+            // Move, collision detection, etc.
             vehicles_update_all(&vehicles, &map);
         }
 

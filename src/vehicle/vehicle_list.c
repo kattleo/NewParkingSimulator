@@ -2,6 +2,8 @@
 
 #include <stdlib.h>
 
+#define OCC_IDX(x, y, width) ((y) * (width) + (x))
+
 void vehicle_list_init(VehicleList *list)
 {
     list->head = NULL;
@@ -58,27 +60,17 @@ void vehicles_update_all(VehicleList *list, Map *map)
 
     // Allocate occupancy grid to check for collisions
     // This grid either holds a Pointer to a Vehicle or Null
-    Vehicle ***occupied = malloc(mapHeight * sizeof(Vehicle **));
+    int width = map->width;
+    int height = map->height;
+    int size = width * height;
+    Vehicle **occupied = malloc(size * sizeof(Vehicle *));
+
     if (!occupied)
         return;
 
-    for (int y = 0; y < mapHeight; ++y)
+    for (int i = 0; i < size; ++i)
     {
-        occupied[y] = malloc(mapWidth * sizeof(Vehicle *));
-        if (!occupied[y])
-        {
-            for (int k = 0; k < y; ++k)
-                free(occupied[k]);
-            free(occupied);
-            return;
-        }
-    }
-    for (int y = 0; y < mapHeight; ++y)
-    {
-        for (int x = 0; x < mapWidth; ++x)
-        {
-            occupied[y][x] = NULL;
-        }
+        occupied[i] = NULL;
     }
 
     // Build initial occupancy from current positions (before movement)
@@ -103,7 +95,7 @@ void vehicles_update_all(VehicleList *list, Map *map)
                 if (tx >= 0 && tx < mapWidth &&
                     ty >= 0 && ty < mapHeight)
                 {
-                    occupied[ty][tx] = v;
+                    occupied[OCC_IDX(tx, ty, width)] = v;
                 }
             }
         }
@@ -113,16 +105,23 @@ void vehicles_update_all(VehicleList *list, Map *map)
     for (VehicleNode *node = list->head; node != NULL; node = node->next)
     {
         Vehicle *v = &node->vehicle;
-        const Sprite *vehicleSprite = vehicle_get_sprite(v);
-        if (!vehicleSprite)
+        const Sprite *spr = vehicle_get_sprite(v);
+        if (!spr)
             continue;
 
-        // Remove this car's old footprint from occupancy (so it doesn't collide with itself)
-        for (int sy = 0; sy < vehicleSprite->height; ++sy)
+        // No path or finished path → skip movement
+        if (!v->has_path || v->path_index >= v->path.length)
         {
-            for (int sx = 0; sx < vehicleSprite->width; ++sx)
+            v->has_path = 0;
+            continue;
+        }
+
+        // 3.1 Remove this car's old footprint from occupancy
+        for (int sy = 0; sy < spr->height; ++sy)
+        {
+            for (int sx = 0; sx < spr->width; ++sx)
             {
-                char c = vehicleSprite->rows[sy][sx];
+                char c = spr->rows[sy][sx];
                 if (c == ' ')
                     continue;
 
@@ -132,63 +131,71 @@ void vehicles_update_all(VehicleList *list, Map *map)
                 if (tx >= 0 && tx < mapWidth &&
                     ty >= 0 && ty < mapHeight)
                 {
-                    if (occupied[ty][tx] == v)
+                    int idx = OCC_IDX(tx, ty, mapWidth);
+                    if (occupied[idx] == v)
                     {
-                        occupied[ty][tx] = NULL;
+                        occupied[idx] = NULL;
                     }
                 }
             }
         }
 
-        // Compute proposed new position from direction
-        int dx = 0, dy = 0;
-        switch (v->dir)
-        {
-        case DIR_EAST:
-            dx = 1;
-            dy = 0;
-            break;
-        case DIR_WEST:
-            dx = -1;
-            dy = 0;
-            break;
-        case DIR_NORTH:
-            dx = 0;
-            dy = -1;
-            break;
-        case DIR_SOUTH:
-            dx = 0;
-            dy = 1;
-            break;
-        }
+        // Next target tile from path
+        PathStep next = v->path.steps[v->path_index];
 
-        int new_x = v->x + dx;
-        int new_y = v->y + dy;
+        int dx = next.x - v->x;
+        int dy = next.y - v->y;
+
+        // Direction from path step
+        if (dx == 1 && dy == 0)
+            v->dir = DIR_EAST;
+        else if (dx == -1 && dy == 0)
+            v->dir = DIR_WEST;
+        else if (dx == 0 && dy == -1)
+            v->dir = DIR_NORTH;
+        else if (dx == 0 && dy == 1)
+            v->dir = DIR_SOUTH;
+        // If dx,dy are weird (e.g. path broken), we could bail:
+        // else { v->has_path = 0; goto re_mark_old_footprint; }
+
+        int new_x = next.x;
+        int new_y = next.y;
 
         int blocked = 0;
 
-        // Check for collissions
-        for (int sy = 0; sy < vehicleSprite->height && !blocked; ++sy)
+        // Combined map + car collision check at new_x,new_y
+        for (int sy = 0; sy < spr->height && !blocked; ++sy)
         {
-            for (int sx = 0; sx < vehicleSprite->width; ++sx)
+            for (int sx = 0; sx < spr->width; ++sx)
             {
-                char c = vehicleSprite->rows[sy][sx];
+                char c = spr->rows[sy][sx];
                 if (c == ' ')
                     continue;
 
                 int tx = new_x + sx;
                 int ty = new_y + sy;
 
-                // Map bcollision
+                // Map collision
                 if (!map_is_walkable(map, tx, ty))
                 {
                     blocked = 1;
                     break;
                 }
 
-                // Car collision
-                if (occupied[ty][tx] != NULL)
+                // Car–car collision
+                if (tx >= 0 && tx < mapWidth &&
+                    ty >= 0 && ty < mapHeight)
                 {
+                    int idx = OCC_IDX(tx, ty, mapWidth);
+                    if (occupied[idx] != NULL)
+                    {
+                        blocked = 1;
+                        break;
+                    }
+                }
+                else
+                {
+                    // Out of bounds, treat as blocked
                     blocked = 1;
                     break;
                 }
@@ -197,18 +204,24 @@ void vehicles_update_all(VehicleList *list, Map *map)
 
         if (!blocked)
         {
-            // Move is valid, update position
+            // Move is valid → apply it
             v->x = new_x;
             v->y = new_y;
+            v->path_index++;
+
+            if (v->path_index >= v->path.length)
+            {
+                v->has_path = 0; // reached goal
+            }
         }
-        // else: blocked, car stays where it is
+        // else: car stays where it is (v->x, v->y unchanged, path_index unchanged)
 
         // Mark this car's footprint back into occupancy
-        for (int sy = 0; sy < vehicleSprite->height; ++sy)
+        for (int sy = 0; sy < spr->height; ++sy)
         {
-            for (int sx = 0; sx < vehicleSprite->width; ++sx)
+            for (int sx = 0; sx < spr->width; ++sx)
             {
-                char c = vehicleSprite->rows[sy][sx];
+                char c = spr->rows[sy][sx];
                 if (c == ' ')
                     continue;
 
@@ -218,13 +231,13 @@ void vehicles_update_all(VehicleList *list, Map *map)
                 if (tx >= 0 && tx < mapWidth &&
                     ty >= 0 && ty < mapHeight)
                 {
-                    occupied[ty][tx] = v;
+                    occupied[OCC_IDX(tx, ty, mapWidth)] = v;
                 }
             }
         }
     }
 
-    // Free occupancy grid ---
+    // Free occupancy grid
     for (int y = 0; y < mapHeight; ++y)
     {
         free(occupied[y]);

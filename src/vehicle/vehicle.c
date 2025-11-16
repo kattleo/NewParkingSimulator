@@ -153,61 +153,30 @@ void vehicle_init(Vehicle *v, int x, int y, Direction dir)
     v->y = y;
     v->dir = dir;
     v->sprites = vehicle_sprites_get_default();
+
+    path_init(&v->path);
+    v->path_index = 0;
+    v->has_path = 0;
 }
 
-void vehicle_update(Vehicle *v, const Map *map)
+void vehicle_set_path(Vehicle *v, const Path *p)
 {
-    int dx = 0;
-    int dy = 0;
+    // Copy path struct by value
+    v->path = *p;
 
-    switch (v->dir)
+    if (v->path.length > 0)
     {
-    case DIR_EAST:
-        dx = 1;
-        dy = 0;
-        break;
-    case DIR_WEST:
-        dx = -1;
-        dy = 0;
-        break;
-    case DIR_NORTH:
-        dx = 0;
-        dy = -1;
-        break;
-    case DIR_SOUTH:
-        dx = 0;
-        dy = 1;
-        break;
+        // Place vehicle at first step (start of path)
+        v->x = v->path.steps[0].x;
+        v->y = v->path.steps[0].y;
+        v->path_index = 1; // next goal is step 1
+        v->has_path = (v->path.length > 1);
     }
-
-    int new_x = v->x + dx;
-    int new_y = v->y + dy;
-
-    const Sprite *spr = vehicle_get_sprite(v);
-
-    // Check if the whole sprite footprint fits on walkable map tiles
-    for (int sy = 0; sy < spr->height; ++sy)
+    else
     {
-        for (int sx = 0; sx < spr->width; ++sx)
-        {
-            char c = spr->rows[sy][sx];
-            if (c == ' ')
-                continue; // transparent
-
-            int tx = new_x + sx;
-            int ty = new_y + sy;
-
-            if (!map_is_walkable(map, tx, ty))
-            {
-                // Blocked by wall or out of bounds -> don't move
-                return;
-            }
-        }
+        v->has_path = 0;
+        v->path_index = 0;
     }
-
-    // All covered tiles are walkable -> Update position
-    v->x = new_x;
-    v->y = new_y;
 }
 
 const Sprite *vehicle_get_sprite(const Vehicle *v)
