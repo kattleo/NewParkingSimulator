@@ -39,22 +39,14 @@ static void vehicle_plan_path_to_current_waypoint(Vehicle *v, Map *map)
     }
 }
 
-void traffic_init_routes_waypoints(VehicleList *vehicles, Map *map)
+void traffic_init_vehicle_route(Vehicle *v, Map *map)
 {
     int num_waypoints = map->waypoint_count;
     if (num_waypoints <= 0)
         return;
 
-    for (VehicleNode *node = vehicles->head; node != NULL; node = node->next)
-    {
-        Vehicle *v = &node->vehicle;
-
-        // 1) assign route 1..N
-        vehicle_set_default_route(v, num_waypoints);
-
-        // 2) plan initial path to route[0]
-        vehicle_plan_path_to_current_waypoint(v, map);
-    }
+    vehicle_set_default_route(v, num_waypoints);
+    vehicle_plan_path_to_current_waypoint(v, map);
 }
 
 void traffic_step(VehicleList *vehicles, Map *map)
