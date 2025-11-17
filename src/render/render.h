@@ -25,7 +25,7 @@ void screen_from_map(Screen *s, const Map *map);
 void screen_draw_vehicle(Screen *s, const Vehicle *v, const Map *map);
 
 // Present buffer to terminal
-void screen_present(const Screen *s, int step);
+void screen_present(const Screen *s, const Map *map, int step);
 
 void screen_draw_paths(Screen *s, const VehicleList *vehicles);
 

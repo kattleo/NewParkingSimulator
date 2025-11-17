@@ -2,15 +2,16 @@
 #define PATH_H
 
 #include <stdbool.h>
-#include "../map/map.h"
+
+#define MAX_PATH_STEPS 1024
+
+struct Map;
 
 typedef struct
 {
     int x;
     int y;
 } PathStep;
-
-#define MAX_PATH_STEPS 1024
 
 typedef struct
 {
@@ -25,7 +26,7 @@ void path_init(Path *p);
 // Returns true on success and fills out_path with the path
 // (steps[0] = start, steps[length-1] = goal).
 // Returns false if no path found or if it would exceed MAX_PATH_STEPS.
-bool path_find(const Map *map,
+bool path_find(const struct Map *map,
                int sx, int sy,
                int gx, int gy,
                Path *out_path);

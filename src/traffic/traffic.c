@@ -49,25 +49,100 @@ void traffic_init_vehicle_route(Vehicle *v, Map *map)
     vehicle_plan_path_to_current_waypoint(v, map);
 }
 
-void traffic_step(VehicleList *vehicles, Map *map)
+void traffic_step(VehicleList *list, Map *map)
 {
-    // 1) Move all vehicles along their current paths + handle collisions
-    vehicles_update_all(vehicles, map);
-
-    // 2) For vehicles that finished their path but still have waypoints, plan next segment
-    for (VehicleNode *node = vehicles->head; node != NULL; node = node->next)
+    for (VehicleNode *node = list->head; node; node = node->next)
     {
         Vehicle *v = &node->vehicle;
 
-        if (!v->has_path)
+        // Already assigned to a parking spot?
+        if (v->state == VEH_DRIVING && !v->wants_parking)
         {
-            // still waypoints left?
-            if (v->route_pos + 1 < v->route_length)
+            ParkingSpot *spot = traffic_find_near_free_spot(v, map, 8);
+
+            if (spot)
             {
-                v->route_pos++;
-                vehicle_plan_path_to_current_waypoint(v, map);
+                printf("Vehicle %d: found parking spot at (%d,%d)\n",
+                       spot->x0, spot->y0);
+
+                v->wants_parking = true;
+                v->assigned_spot = spot;
+                spot->occupied = true;
+                spot->occupant = v;
+
+                // Create path to the anchor
+                Path p;
+                path_init(&p);
+                if (path_find(map, v->x, v->y, spot->x0, spot->y0, &p))
+                {
+                    vehicle_set_path(v, &p);
+                    v->state = VEH_PARKING;
+                    continue; // skip waypoint logic
+                }
+                else
+                {
+                    // can't reach it, make it free again
+                    spot->occupied = false;
+                    spot->occupant = NULL;
+                    v->wants_parking = false;
+                    v->assigned_spot = NULL;
+                }
             }
-            // else: route completed, car stays where it is
+        }
+
+        // If vehicle is parking and has reached its spot
+        if (v->state == VEH_PARKING && !v->has_path)
+        {
+            v->state = VEH_PARKED;
+            printf("Vehicle parked!\n");
+            continue;
+        }
+
+        //  OTHERWISE: old waypoint-driving logic …
+    }
+
+    // Move everyone + collision control
+    vehicles_update_all(list, map);
+}
+
+ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
+{
+    ParkingSpot *best = NULL;
+    int best_d2 = 999999;
+
+    for (int i = 0; i < map->parking_count; ++i)
+    {
+        ParkingSpot *p = &map->parkings[i];
+
+        if (p->occupied)
+            continue;
+
+        int dx = p->x0 - v->x;
+        int dy = p->y0 - v->y;
+
+        int dist2 = dx * dx + dy * dy;
+
+        if (dist2 <= radius * radius)
+        {
+            if (dist2 < best_d2)
+            {
+                best = p;
+                best_d2 = dist2;
+            }
         }
     }
+    return best;
+}
+
+void traffic_update_parking_states(Vehicle *v, Map *map)
+{
+    if (!v->going_to_parking || v->parking_spot_id < 0)
+        return;
+
+    if (v->has_path) // still moving
+        return;
+
+    // arrived at parking anchor
+    v->state = VEH_PARKED;
+    // keep spot->occupied = 1
 }

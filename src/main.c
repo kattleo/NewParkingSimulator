@@ -7,6 +7,7 @@
 #include "vehicle/vehicle_list.h"
 #include "render/render.h"
 #include "traffic/traffic.h"
+#include "common/direction.h"
 
 bool assets_init(Map *map)
 {
@@ -79,7 +80,7 @@ int main(void)
         }
 
         // 3) Present
-        screen_present(&screen, step);
+        screen_present(&screen, &map, step);
 
         // 4) One traffic simulation step (move + path replanning)
         traffic_step(&vehicles, &map);

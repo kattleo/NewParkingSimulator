@@ -160,6 +160,10 @@ void vehicle_init(Vehicle *v, int x, int y, Direction dir)
 
     v->route_length = 0;
     v->route_pos = 0;
+
+    v->state = VEH_DRIVING;
+    v->parking_spot_id = -1;
+    v->going_to_parking = 0;
 }
 
 void vehicle_set_path(Vehicle *v, const Path *p)

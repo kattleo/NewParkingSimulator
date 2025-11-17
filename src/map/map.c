@@ -20,6 +20,7 @@ bool map_load(Map *map, const char *filename)
     int num_lines = 0;
     int width = 0;
     map->waypoint_count = 0;
+    map->parking_count = 0;
 
     // Read all lines into temporary array to determine dimensions
     char buffer[MAX_LINE_LEN];
@@ -134,6 +135,8 @@ bool map_load(Map *map, const char *filename)
         }
     }
 
+    map_build_parking_spots(map);
+
     // Free temporary lines
     for (int i = 0; i < num_lines; ++i)
     {
@@ -148,6 +151,96 @@ error_cleanup_lines:
         free(lines[i]);
     }
     return false;
+}
+
+void map_build_parking_spots(Map *map)
+{
+    map->parking_count = 0;
+
+    for (int y = 0; y < map->height - 1; ++y)
+    {
+        for (int x = 0; x < map->width - 5; ++x)
+        {
+            // Check if a 2×6 block of TILE_PARKING begins here
+            int is_parking = 1;
+
+            for (int dy = 0; dy < 2 && is_parking; ++dy)
+            {
+                for (int dx = 0; dx < 6; ++dx)
+                {
+                    if (map->tiles[y + dy][x + dx].type != TILE_PARKING)
+                    {
+                        is_parking = 0;
+                        break;
+                    }
+                }
+            }
+
+            if (!is_parking)
+                continue;
+
+            // -- We found a parking spot --
+            if (map->parking_count < MAX_PARKING_SPOTS)
+            {
+                ParkingSpot *spot = &map->parkings[map->parking_count];
+                spot->id = map->parking_count;
+
+                spot->x0 = x;
+                spot->y0 = y;
+                spot->width = 6;
+                spot->height = 2;
+
+                spot->occupied = 0;
+                spot->occupant = NULL;
+
+                // Determine indicator position:
+                // Left '('|'') or right
+                spot->indicator_x = -1;
+                spot->indicator_y = -1;
+
+                // Left side
+                if (x > 0 &&
+                    map->tiles[y][x - 1].symbol == '|')
+                {
+                    spot->indicator_x = x - 1;
+                    spot->indicator_y = y;
+                }
+                // Right side
+                else if (x + 6 < map->width &&
+                         map->tiles[y][x + 6].symbol == '|')
+                {
+                    spot->indicator_x = x + 6;
+                    spot->indicator_y = y;
+                }
+
+                // Mark indicator tile type
+                if (spot->indicator_x >= 0 && spot->indicator_y >= 0)
+                {
+                    Tile *t1 = &map->tiles[spot->indicator_y][spot->indicator_x];
+                    t1->type = TILE_PARKING_INDICATOR;
+                    // Mark tile underneath as belonging to this spot
+                    Tile *t2 = &map->tiles[spot->indicator_y + 1][spot->indicator_x];
+                    t2->type = TILE_PARKING_INDICATOR;
+                }
+
+                map->parking_count++;
+            }
+
+            // Skip the remaining 5 tiles so we don't detect the same spot again
+            x += 5;
+        }
+    }
+}
+
+const ParkingSpot *map_get_parking_spot_with_indicator(const Map *map, int x, int y)
+{
+    for (int i = 0; i < map->parking_count; ++i)
+    {
+        const ParkingSpot *s = &map->parkings[i];
+        if (s->indicator_x == x && s->indicator_y == y)
+            return s;
+    }
+    return NULL;
 }
 
 void map_free(Map *map)
@@ -200,4 +293,17 @@ const Waypoint *map_get_waypoint_by_id(const Map *map, int id)
         }
     }
     return NULL;
+}
+
+void map_debug_print_parking(const Map *map)
+{
+    printf("Parking spots (%d):\n", map->parking_count);
+    for (int i = 0; i < map->parking_count; ++i)
+    {
+        const ParkingSpot *s = &map->parkings[i];
+        printf("  Spot %d: cells=%d, anchor=(%d,%d), indicator=(%d,%d)\n",
+               s->id,
+               s->x0, s->y0,
+               s->indicator_x, s->indicator_y);
+    }
 }

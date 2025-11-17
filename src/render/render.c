@@ -82,7 +82,7 @@ void screen_draw_vehicle(Screen *s, const Vehicle *v, const Map *map)
     }
 }
 
-void screen_present(const Screen *s, int step)
+void screen_present(const Screen *s, const Map *map, int step)
 {
     clear_screen();
     printf("Step: %d\n", step);
@@ -91,33 +91,48 @@ void screen_present(const Screen *s, int step)
     {
         for (int x = 0; x < s->width; ++x)
         {
+            // ---- Parking Indicator Logic ----
+            Tile *t = &map->tiles[y][x];
+            if (t->type == TILE_PARKING_INDICATOR)
+            {
+                ParkingSpot *spot = t->spot;
+                if (spot && spot->occupied)
+                    printf("\033[31m|\033[0m"); // red
+                else
+                    printf("\033[92m│\033[0m"); // bright green
+
+                continue;
+            }
+            // ---------------------------------
+
             char c = s->buffer[y][x];
+
             switch (c)
             {
             case '_':
                 printf("─");
-                break; // horizontal wall
+                break;
             case '|':
                 printf("│");
-                break; // vertical wall
+                break;
             case 'R':
                 printf("┌");
-                break; // top-left corner
+                break;
             case 'T':
                 printf("┐");
-                break; // top-right corner
+                break;
             case 'L':
                 printf("└");
-                break; // bottom-left corner
+                break;
             case 'J':
                 printf("┘");
-                break; // bottom-right corner
+                break;
             case '+':
                 printf("┼");
-                break; // intersection (optional)
+                break;
             case '*':
                 printf("\033[90m*\033[0m");
-                break; // gray path
+                break;
             default:
                 putchar(c);
                 break;

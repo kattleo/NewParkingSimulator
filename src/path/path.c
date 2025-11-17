@@ -4,6 +4,8 @@
 #include <string.h>
 #include <stdio.h>
 
+#include "../map/map.h"
+
 // Macros to convert between (x,y) and flat index
 #define IDX(x, y, width) ((y) * (width) + (x))
 
@@ -12,7 +14,7 @@ void path_init(Path *p)
     p->length = 0;
 }
 
-bool path_find(const Map *map,
+bool path_find(const struct Map *map,
                int sx, int sy,
                int gx, int gy,
                Path *out_path)

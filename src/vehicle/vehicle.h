@@ -2,17 +2,20 @@
 #define VEHICLE_H
 
 #include "../map/map.h"
+#include "../common/direction.h"
 #include "../path/path.h"
 
 #define MAX_ROUTE_WAYPOINTS 16
 
+struct ParkingSpot;
+
 typedef enum
 {
-    DIR_NORTH,
-    DIR_EAST,
-    DIR_SOUTH,
-    DIR_WEST
-} Direction;
+    VEH_DRIVING,
+    VEH_PARKING,
+    VEH_PARKED,
+    VEH_LEAVING
+} VehicleState;
 
 typedef struct
 {
@@ -30,7 +33,7 @@ typedef struct
     Sprite west;
 } VehicleSprites;
 
-typedef struct
+typedef struct Vehicle
 {
     int x;
     int y;
@@ -46,6 +49,14 @@ typedef struct
     int route[MAX_ROUTE_WAYPOINTS]; // sequence of waypoint IDs
     int route_length;
     int route_pos; // index into route[]
+
+    VehicleState state;
+
+    struct ParkingSpot *assigned_spot;
+    bool wants_parking;
+
+    int parking_spot_id;  // -1 = none
+    int going_to_parking; // bool-ish
 } Vehicle;
 
 // Initialize global/default vehicle sprites from 4 txt files
