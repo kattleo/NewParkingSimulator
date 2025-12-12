@@ -43,6 +43,7 @@ void config_load(Config *cfg, const char *filename) {
 
 
 #include "map/map.h"
+#include "common/menu.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_list.h"
 #include "render/render.h"
@@ -85,6 +86,9 @@ static uint64_t now_ms() {
 
 int main(void)
 {
+    // Show menu before starting game
+    int mode = menu_show();
+    (void)mode; // Not used yet
     Config config;
     config_load(&config, "assets/config.txt");
     Map map;
