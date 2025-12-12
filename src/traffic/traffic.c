@@ -109,17 +109,26 @@ void traffic_step(VehicleList *list, Map *map)
             }
         }
 
-        // --- PARKING ARRIVAL LOGIC ---
+        // --- PARKING ARRIVAL/LEAVE LOGIC ---
         if (v->going_to_parking && v->parking_spot_id >= 0 && v->assigned_spot) {
             ParkingSpot *spot = v->assigned_spot;
             // Consider parked when vehicle's anchor reaches the spot's anchor
             int parked = (v->x == spot->x0 && v->y == spot->y0);
             if (parked && !v->has_path) {
                 v->state = VEH_PARKED;
-                // Spot remains occupied
-                // Optionally: print debug
+                spot->occupied = 1;
+                spot->occupant = v;
                 printf("[traffic] Vehicle parked at spot id=%d anchor=(%d,%d)\n", spot->id, spot->x0, spot->y0);
             }
+        }
+
+        // --- PARKING LEAVE LOGIC ---
+        if (v->state == VEH_LEAVING && v->assigned_spot) {
+            ParkingSpot *spot = v->assigned_spot;
+            spot->occupied = 0;
+            spot->occupant = NULL;
+            v->assigned_spot = NULL;
+            v->parking_spot_id = -1;
         }
 
         // --- WAYPOINT-FOLLOWING LOGIC (if not parking) ---

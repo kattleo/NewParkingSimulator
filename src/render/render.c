@@ -96,7 +96,11 @@ void screen_present(const Screen *s, const Map *map, int step)
             if (t->type == TILE_PARKING_INDICATOR)
             {
                 ParkingSpot *spot = t->spot;
-                if (spot && spot->occupied)
+                // Only show red if spot is occupied AND the occupant is actually parked
+                int is_really_parked = 0;
+                if (spot && spot->occupied && spot->occupant && spot->occupant->state == VEH_PARKED)
+                    is_really_parked = 1;
+                if (is_really_parked)
                     printf("\033[31m|\033[0m"); // red
                 else
                     printf("\033[92m│\033[0m"); // bright green
