@@ -3,20 +3,20 @@ R_______________________________________________________________________________
           g                          3                                         2                             |
                                                                                                              |
                    ______                          ______  ______                          ______            |
-|                ||                                      ||                                      ||          |
-|                ||                                      ||                                      ||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
 |                ||______                          ______||______                          ______||          |
-|                ||                                      ||                                      ||          |
-|                ||                                      ||                                      ||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
 |                ||______                          ______||______                          ______||          |
-|                ||                                      ||                                      ||          |
-|                ||                                      ||                                      ||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
 |                ||______                          ______||______                          ______||          |
-|                ||                                      ||                                      ||          |
-|                ||                                      ||                                      ||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
 |                ||______                          ______||______                          ______||          |
-|                ||                                      ||PPPPPPPP                      PPPPPPPP||          |
-|                ||                                      ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
+|                ||PPPPPPPP                              ||PPPPPPPP                      PPPPPPPP||          |
 |                ||______                          ______||______                          ______||          |
 |                                                                                                   _________|
 |       5                            4                                         1                   G S        
