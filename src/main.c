@@ -52,7 +52,7 @@ int main(void)
     game.account_balance = 0;
 
     const int FRAME_DT_MS = 150;
-    enum Phase { PHASE_SPAWN, PHASE_WAIT_OPEN, PHASE_OPEN, PHASE_WAIT_CLOSE };
+    enum Phase { PHASE_SPAWN, PHASE_WAIT_OPEN, PHASE_OPEN, PHASE_WAIT_CLOSE, PHASE_WAIT_SPAWN };
     enum Phase phase = PHASE_SPAWN;
     int phase_timer = 0;
     int vehicle_steps = 0;
@@ -63,30 +63,26 @@ int main(void)
     // Ensure gate is closed at start
     map_set_gate_open(&map, 0);
 
-    int car_spawned = 0;
     for (int step = 0; step < 500; ++step) {
         // State machine for gate/vehicle logic
         switch (phase) {
             case PHASE_SPAWN: {
                 // Spawn a new vehicle at start
-                if (!car_spawned) {
-                    Vehicle v;
-                    int vx = 133, vy = 27;
-                    if (map.has_start) {
-                        vx = map.start_x;
-                        vy = map.start_y;
-                    }
-                    vehicle_init(&v, vx, vy, DIR_WEST);
-                    vehicle_list_push_back(&vehicles, &v);
-                    Vehicle *nv = &vehicles.tail->vehicle;
-                    traffic_init_vehicle_route(nv, &map);
-                    vehicle_steps = 0;
-                    last_vehicle_x = vx;
-                    last_vehicle_y = vy;
-                    phase_timer = 1000; // 1 second
-                    phase = PHASE_WAIT_OPEN;
-                    car_spawned = 1;
+                Vehicle v;
+                int vx = 133, vy = 27;
+                if (map.has_start) {
+                    vx = map.start_x;
+                    vy = map.start_y;
                 }
+                vehicle_init(&v, vx, vy, DIR_WEST);
+                vehicle_list_push_back(&vehicles, &v);
+                Vehicle *nv = &vehicles.tail->vehicle;
+                traffic_init_vehicle_route(nv, &map);
+                vehicle_steps = 0;
+                last_vehicle_x = vx;
+                last_vehicle_y = vy;
+                phase_timer = 1000; // 1 second
+                phase = PHASE_WAIT_OPEN;
                 break;
             }
             case PHASE_WAIT_OPEN:
@@ -121,7 +117,14 @@ int main(void)
                 break;
             }
             case PHASE_WAIT_CLOSE:
-                phase_timer -= FRAME_DT_MS;
+                phase_timer -= FRAME_DT_MS / 2; // match tick speed
+                if (phase_timer <= 0) {
+                    phase = PHASE_WAIT_SPAWN;
+                    phase_timer = 1000; // 1 second wait before next spawn
+                }
+                break;
+            case PHASE_WAIT_SPAWN:
+                phase_timer -= FRAME_DT_MS / 2;
                 if (phase_timer <= 0) {
                     phase = PHASE_SPAWN;
                 }
