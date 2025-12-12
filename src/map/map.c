@@ -1,3 +1,4 @@
+#include "../common/debug.h"
 
 #include <assert.h>
 #include <stdio.h>
@@ -67,7 +68,7 @@ bool map_load(Map *map, const char *filename)
 
         if (num_lines >= MAX_TEMP_LINES)
         {
-            fprintf(stderr, "Too many lines in map file\n");
+            debug_log("Too many lines in map file\n");
             fclose(f);
             return false;
         }
@@ -92,7 +93,7 @@ bool map_load(Map *map, const char *filename)
 
     if (num_lines == 0 || width == 0)
     {
-        fprintf(stderr, "Map file is empty or invalid\n");
+        debug_log("Map file is empty or invalid\n");
         return false;
     }
 
@@ -104,7 +105,7 @@ bool map_load(Map *map, const char *filename)
     map->tiles = malloc(map->height * sizeof(Tile *));
     if (!map->tiles)
     {
-        fprintf(stderr, "Failed to allocate map rows\n");
+        debug_log("Failed to allocate map rows\n");
         goto error_cleanup_lines;
     }
 
@@ -113,7 +114,7 @@ bool map_load(Map *map, const char *filename)
         map->tiles[y] = malloc(map->width * sizeof(Tile));
         if (!map->tiles[y])
         {
-            fprintf(stderr, "Failed to allocate map row %d\n", y);
+            debug_log("Failed to allocate map row %d\n", y);
             // free previous rows
             for (int k = 0; k < y; ++k)
             {
@@ -373,11 +374,11 @@ const Waypoint *map_get_waypoint_by_id(const Map *map, int id)
 
 void map_debug_print_parking(const Map *map)
 {
-    printf("Parking spots (%d):\n", map->parking_count);
+    debug_log("Parking spots (%d):\n", map->parking_count);
     for (int i = 0; i < map->parking_count; ++i)
     {
         const ParkingSpot *s = &map->parkings[i];
-         printf("  Spot %d: cells=%d, anchor=(%d,%d), indicator=(%d,%d)\n",
-             s->id, s->capacity, s->x0, s->y0, s->indicator_x, s->indicator_y);
+             debug_log("  Spot %d: cells=%d, anchor=(%d,%d), indicator=(%d,%d)\n",
+                s->id, s->capacity, s->x0, s->y0, s->indicator_x, s->indicator_y);
     }
 }

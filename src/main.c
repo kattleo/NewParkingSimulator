@@ -1,3 +1,5 @@
+// ...existing includes...
+#include "common/debug.h"
 
 
 #include <stdio.h>
@@ -20,13 +22,13 @@ bool assets_init(Map *map)
 {
     if (!map_load(map, "assets/map.txt"))
     {
-        fprintf(stderr, "Failed to load map\n");
+        debug_log("Failed to load map\n");
         return false;
     }
 
     if (!vehicle_sprites_init("assets/carSmall"))
     {
-        fprintf(stderr, "Failed to init vehicle sprites\n");
+        debug_log("Failed to init vehicle sprites\n");
         map_free(map);
         return false;
     }
@@ -64,6 +66,7 @@ int main(void)
         config.spawn_rate_ms = config.spawn_rate_busy;
         config.frame_dt_ms = config.frame_dt_ms_busy;
     }
+    debug_set_enabled(config.debug_logs);
     Map map;
     if (!assets_init(&map))
         return 1;
@@ -71,7 +74,7 @@ int main(void)
     Screen screen;
     if (!screen_init(&screen, &map))
     {
-        fprintf(stderr, "Failed to init screen\n");
+        debug_log("Failed to init screen\n");
         map_free(&map);
         return 1;
     }
@@ -199,21 +202,18 @@ int main(void)
                     if (max_sec < min_sec) max_sec = min_sec;
                     v->parking_time_sec = min_sec + rand() % (max_sec - min_sec + 1);
                     v->parking_start_time_ms = now_ms();
-                    if (config.debug_logs)
-                        printf("[DEBUG] Vehicle %d: Assigned random parking time: %d s, start_time_ms: %llu\n", vid, v->parking_time_sec, (unsigned long long)v->parking_start_time_ms);
+                    debug_log("[DEBUG] Vehicle %d: Assigned random parking time: %d s, start_time_ms: %llu\n", vid, v->parking_time_sec, (unsigned long long)v->parking_start_time_ms);
                 }
                 uint64_t elapsed_ms = now_ms() - v->parking_start_time_ms;
                 int remaining_ms = v->parking_time_sec * 1000 - (int)elapsed_ms;
                 if (remaining_ms < 0) remaining_ms = 0;
                 v->parking_time_remaining = remaining_ms;
                 if (v->parking_time_remaining <= 0) {
-                    if (config.debug_logs)
-                        printf("[DEBUG] Vehicle %d: Parking time elapsed, switching to LEAVING.\n", vid);
+                    debug_log("[DEBUG] Vehicle %d: Parking time elapsed, switching to LEAVING.\n", vid);
                     v->state = VEH_LEAVING;
                     const Sprite *spr = vehicle_get_sprite(v);
                     v->reverse_steps_remaining = spr->width + 2; // Back out 2 extra tiles for testing
-                    if (config.debug_logs)
-                        printf("[DEBUG] Vehicle %d: Starting to reverse out (%d steps)\n", vid, v->reverse_steps_remaining);
+                    debug_log("[DEBUG] Vehicle %d: Starting to reverse out (%d steps)\n", vid, v->reverse_steps_remaining);
                 }
             } else {
                 // Reset for next time parked
@@ -238,12 +238,12 @@ int main(void)
             if (v->state == VEH_DRIVING && v->x == 0 && v->y == 1) {
                 if (map.gate_exit.open) {
                     map.gate_exit.open = 0;
-                    printf("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
+                    debug_log("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
                 }
                 // Add money to account based on parking_time_sec and mark for deletion
                 int payout = v->parking_time_sec * 10;
                 game.account_balance += payout;
-                printf("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, v->parking_time_sec);
+                debug_log("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, v->parking_time_sec);
                 v->state = -1; // Mark for deletion
             }
             // Handle exit gate opening for single vehicle
@@ -251,35 +251,35 @@ int main(void)
             if ((v->state == VEH_DRIVING || v->state == VEH_EXIT_QUEUE) && map.has_end && v->x == map.end_x && v->y == map.end_y) {
                 if (!map.gate_exit.open) {
                     map.gate_exit.open = 1;
-                    printf("[DEBUG] Exit gate opened for vehicle %d.\n", vid);
+                    debug_log("[DEBUG] Exit gate opened for vehicle %d.\n", vid);
                 }
                 v->state = VEH_EXIT_QUEUE;
                 v->has_path = 0;
-                printf("[DEBUG] Vehicle %d: Reached exit entry spot ('E'), now in exit queue.\n", vid);
+                debug_log("[DEBUG] Vehicle %d: Reached exit entry spot ('E'), now in exit queue.\n", vid);
                 // Set path goal to (0,1)
                 int target_x = 0, target_y = 1;
                 const Sprite *spr = vehicle_get_sprite(v);
-                printf("[DEBUG] Car sprite width: %d, height: %d\n", spr ? spr->width : -1, spr ? spr->height : -1);
+                debug_log("[DEBUG] Car sprite width: %d, height: %d\n", spr ? spr->width : -1, spr ? spr->height : -1);
                 Path p; path_init(&p);
                 int found = path_find(&map, v->x, v->y, target_x, target_y, &p);
-                printf("[DEBUG] path_find to (%d,%d) returned %d, path length: %d\n", target_x, target_y, found, p.length);
+                debug_log("[DEBUG] path_find to (%d,%d) returned %d, path length: %d\n", target_x, target_y, found, p.length);
                 if (found) {
                     vehicle_set_path(v, &p);
                     v->state = VEH_DRIVING;
-                    printf("[DEBUG] Vehicle %d: Path to (%d,%d) set, now driving to exit (0,1).\n", vid, target_x, target_y);
+                    debug_log("[DEBUG] Vehicle %d: Path to (%d,%d) set, now driving to exit (0,1).\n", vid, target_x, target_y);
                 } else {
-                    printf("[DEBUG] Vehicle %d: Failed to set path to (%d,%d)!\n", vid, target_x, target_y);
+                    debug_log("[DEBUG] Vehicle %d: Failed to set path to (%d,%d)!\n", vid, target_x, target_y);
                 }
             }
             // When vehicle reaches (0,1), close the gate again
             if (v->state == VEH_DRIVING && v->x == 0 && v->y == 1) {
                 if (map.gate_exit.open) {
                     map.gate_exit.open = 0;
-                    printf("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
+                    debug_log("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
                 }
             }
             if (v->state == VEH_LEAVING && v->reverse_steps_remaining > 0) {
-                printf("[DEBUG] Vehicle at (%d,%d) in LEAVING, reverse_steps_remaining=%d\n", v->x, v->y, v->reverse_steps_remaining);
+                debug_log("[DEBUG] Vehicle at (%d,%d) in LEAVING, reverse_steps_remaining=%d\n", v->x, v->y, v->reverse_steps_remaining);
                 // Move in the opposite direction of v->dir
                 switch (v->dir) {
                     case DIR_EAST:  v->x -= 1; break;
@@ -288,12 +288,12 @@ int main(void)
                     case DIR_SOUTH: v->y -= 1; break;
                 }
                 v->reverse_steps_remaining--;
-                printf("[DEBUG] Vehicle: Reversing, steps remaining: %d\n", v->reverse_steps_remaining);
+                debug_log("[DEBUG] Vehicle: Reversing, steps remaining: %d\n", v->reverse_steps_remaining);
                 // Only clear parking assignment after reversing is done
                 if (v->reverse_steps_remaining == 0) {
                     // Only clear parking assignment once
                     if (v->assigned_spot) {
-                        printf("[DEBUG] Vehicle: Finished reversing, clearing parking spot and searching for exit tile...\n");
+                        debug_log("[DEBUG] Vehicle: Finished reversing, clearing parking spot and searching for exit tile...\n");
                         ParkingSpot *spot = v->assigned_spot;
                         spot->occupied = 0;
                         spot->occupant = NULL;
@@ -308,25 +308,25 @@ int main(void)
                             const Sprite *spr = vehicle_get_sprite(v);
                             int car_w = spr->width;
                             int car_h = spr->height;
-                            printf("[DEBUG] Attempting to pathfind_with_size from (%d, %d) to exit (%d, %d) with car size %dx%d\n", v->x, v->y, ex, ey, car_w, car_h);
+                            debug_log("[DEBUG] Attempting to pathfind_with_size from (%d, %d) to exit (%d, %d) with car size %dx%d\n", v->x, v->y, ex, ey, car_w, car_h);
                             if (!map_is_walkable(&map, v->x, v->y)) {
-                                printf("[DEBUG] Vehicle at (%d,%d) is not on a walkable tile! Tile type: %d\n", v->x, v->y, map.tiles[v->y][v->x].type);
+                                debug_log("[DEBUG] Vehicle at (%d,%d) is not on a walkable tile! Tile type: %d\n", v->x, v->y, map.tiles[v->y][v->x].type);
                             }
                             if (!map_is_walkable(&map, ex, ey)) {
-                                printf("[DEBUG] Exit tile at (%d,%d) is not walkable! Tile type: %d\n", ex, ey, map.tiles[ey][ex].type);
+                                debug_log("[DEBUG] Exit tile at (%d,%d) is not walkable! Tile type: %d\n", ex, ey, map.tiles[ey][ex].type);
                             }
                             Path p; path_init(&p);
                             int found = path_find_with_size(&map, v->x, v->y, ex, ey, car_w, car_h, &p);
-                            printf("[DEBUG] path_find_with_size returned %d, path length: %d\n", found, p.length);
+                            debug_log("[DEBUG] path_find_with_size returned %d, path length: %d\n", found, p.length);
                             if (found) {
                                 vehicle_set_path(v, &p);
                                 v->state = VEH_DRIVING;
-                                printf("[DEBUG] Path to exit set, vehicle now driving to exit. State: %d, has_path: %d\n", v->state, v->has_path);
+                                debug_log("[DEBUG] Path to exit set, vehicle now driving to exit. State: %d, has_path: %d\n", v->state, v->has_path);
                             } else {
-                                printf("[DEBUG] Pathfinding to exit failed! Will retry next frame.\n");
+                                debug_log("[DEBUG] Pathfinding to exit failed! Will retry next frame.\n");
                             }
                         } else {
-                            printf("[DEBUG] No exit tile found: map.has_end is not set!\n");
+                            debug_log("[DEBUG] No exit tile found: map.has_end is not set!\n");
                         }
                     }
                 }

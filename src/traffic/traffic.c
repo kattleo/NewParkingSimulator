@@ -1,3 +1,4 @@
+#include "../common/debug.h"
 #include "traffic.h"
 
 #include <stdio.h>
@@ -59,7 +60,7 @@ void traffic_step(VehicleList *list, Map *map)
         // Only consider parking if not already parking or parked
         if (!v->going_to_parking && v->state != VEH_PARKED) {
             // Look for a free parking spot (prefer nearby, fallback to global)
-            printf("[traffic] Vehicle at (%d,%d) seeking parking (radius=%d)\n", v->x, v->y, 12);
+            debug_log("[traffic] Vehicle at (%d,%d) seeking parking (radius=%d)\n", v->x, v->y, 12);
             ParkingSpot *spot = traffic_find_near_free_spot(v, map, 12);
             if (spot && !spot->occupied) {
                 v->going_to_parking = 1;
@@ -67,7 +68,7 @@ void traffic_step(VehicleList *list, Map *map)
                 v->assigned_spot = spot;
                 spot->occupied = 1;
                 spot->occupant = v;
-                printf("[traffic] Assigned parking spot id=%d anchor=(%d,%d) size=%dx%d\n", spot->id, spot->x0, spot->y0, spot->width, spot->height);
+                debug_log("[traffic] Assigned parking spot id=%d anchor=(%d,%d) size=%dx%d\n", spot->id, spot->x0, spot->y0, spot->width, spot->height);
                 // Primary: drive to the spot's anchor (upper-left of the block)
                 Path p;
                 path_init(&p);
@@ -75,21 +76,21 @@ void traffic_step(VehicleList *list, Map *map)
                 int car_w = spr->width;
                 int car_h = spr->height;
                 int found = 0;
-                printf("[traffic] Attempt path to spot anchor (%d,%d)\n", spot->x0, spot->y0);
+                debug_log("[traffic] Attempt path to spot anchor (%d,%d)\n", spot->x0, spot->y0);
                 if (path_find_with_size(map, v->x, v->y, spot->x0, spot->y0, car_w, car_h, &p)) {
                     vehicle_set_path(v, &p);
                     v->state = VEH_PARKING;
-                    printf("[traffic] Anchor path success: length=%d\n", p.length);
+                    debug_log("[traffic] Anchor path success: length=%d\n", p.length);
                     found = 1;
                 } else {
                     // Fallback: try any valid position inside the parking area
-                    printf("[traffic] Anchor path failed; scanning inside spot for alternative positions\n");
+                    debug_log("[traffic] Anchor path failed; scanning inside spot for alternative positions\n");
                     for (int py = spot->y0; py <= spot->y0 + spot->height - car_h; ++py) {
                         for (int px = spot->x0; px <= spot->x0 + spot->width - car_w; ++px) {
                             if (path_find_with_size(map, v->x, v->y, px, py, car_w, car_h, &p)) {
                                 vehicle_set_path(v, &p);
                                 v->state = VEH_PARKING;
-                                printf("[traffic] Fallback path success to (%d,%d): length=%d\n", px, py, p.length);
+                                debug_log("[traffic] Fallback path success to (%d,%d): length=%d\n", px, py, p.length);
                                 found = 1;
                                 break;
                             }
@@ -99,7 +100,7 @@ void traffic_step(VehicleList *list, Map *map)
                 }
                 if (!found) {
                     // If no path, give up parking for now
-                    printf("[traffic] No valid path into spot id=%d; releasing reservation\n", spot->id);
+                    debug_log("[traffic] No valid path into spot id=%d; releasing reservation\n", spot->id);
                     v->going_to_parking = 0;
                     v->parking_spot_id = -1;
                     v->assigned_spot = NULL;
@@ -118,7 +119,7 @@ void traffic_step(VehicleList *list, Map *map)
                 v->state = VEH_PARKED;
                 spot->occupied = 1;
                 spot->occupant = v;
-                printf("[traffic] Vehicle parked at spot id=%d anchor=(%d,%d)\n", spot->id, spot->x0, spot->y0);
+                debug_log("[traffic] Vehicle parked at spot id=%d anchor=(%d,%d)\n", spot->id, spot->x0, spot->y0);
             }
         }
 
@@ -217,7 +218,7 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
 
         if (dist2 <= radius * radius)
         {
-            printf("[traffic] Spot id=%d within radius: dist2=%d (occupied=%d)\n", p->id, dist2, p->occupied);
+            debug_log("[traffic] Spot id=%d within radius: dist2=%d (occupied=%d)\n", p->id, dist2, p->occupied);
             if (dist2 < best_d2)
             {
                 best = p;
@@ -226,7 +227,7 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
         }
     }
     if (best) {
-        printf("[traffic] Selected nearby spot id=%d (dist2=%d)\n", best->id, best_d2);
+        debug_log("[traffic] Selected nearby spot id=%d (dist2=%d)\n", best->id, best_d2);
         return best;
     }
 
@@ -251,9 +252,9 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
         }
     }
     if (best)
-        printf("[traffic] No spot within radius=%d; selecting global nearest id=%d (dist2=%d)\n", radius, best->id, best_d2);
+        debug_log("[traffic] No spot within radius=%d; selecting global nearest id=%d (dist2=%d)\n", radius, best->id, best_d2);
     else
-        printf("[traffic] No free parking spots available\n");
+        debug_log("[traffic] No free parking spots available\n");
     return best;
 }
 

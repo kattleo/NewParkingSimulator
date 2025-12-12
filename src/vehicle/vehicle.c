@@ -1,3 +1,4 @@
+#include "../common/debug.h"
 #include "vehicle.h"
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,7 +21,7 @@ static int load_sprite_from_file(Sprite *spr,
     FILE *f = fopen(filepath, "r");
     if (!f)
     {
-        fprintf(stderr, "Failed to open sprite file: %s\n", filepath);
+        debug_log("Failed to open sprite file: %s\n", filepath);
         return 0;
     }
 
@@ -40,7 +41,7 @@ static int load_sprite_from_file(Sprite *spr,
     {
         if (!fgets(buffer, sizeof(buffer), f))
         {
-            fprintf(stderr, "Sprite file %s has too few lines (expected %d)\n",
+            debug_log("Sprite file %s has too few lines (expected %d)\n",
                     filepath, height);
             // cleanup
             for (int k = 0; k < y; ++k)
@@ -60,7 +61,7 @@ static int load_sprite_from_file(Sprite *spr,
 
         if ((int)len < width)
         {
-            fprintf(stderr, "Sprite file %s line %d too short (got %zu, need %d)\n",
+            debug_log("Sprite file %s line %d too short (got %zu, need %d)\n",
                     filepath, y, len, width);
             for (int k = 0; k < y; ++k)
                 free(spr->rows[k]);
@@ -141,7 +142,7 @@ const VehicleSprites *vehicle_sprites_get_default(void)
 {
     if (!g_sprites_loaded)
     {
-        fprintf(stderr, "Error: vehicle sprites not initialized!\n");
+        debug_log("Error: vehicle sprites not initialized!\n");
         return NULL;
     }
     return &g_default_sprites;

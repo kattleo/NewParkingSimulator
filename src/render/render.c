@@ -1,3 +1,4 @@
+#include "../common/debug.h"
 #include "render.h"
 
 #include <stdio.h>
@@ -85,7 +86,7 @@ void screen_draw_vehicle(Screen *s, const Vehicle *v, const Map *map)
 void screen_present(const Screen *s, const Map *map, int step)
 {
     clear_screen();
-    printf("Step: %d\n", step);
+    debug_log("Step: %d\n", step);
 
     for (int y = 0; y < s->height; ++y)
     {
