@@ -7,4 +7,4 @@ typedef struct Waypoint {
     int y;
 } Waypoint;
 
-#endif // WAYPOINT_H
+#endif

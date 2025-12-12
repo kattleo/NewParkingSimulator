@@ -214,8 +214,6 @@ void vehicles_update_all(VehicleList *list, Map *map)
                 v->has_path = 0; // reached goal
             }
         }
-        // else: car stays where it is (v->x, v->y unchanged, path_index unchanged)
-
         // Mark this car's footprint back into occupancy
         for (int sy = 0; sy < spr->height; ++sy)
         {

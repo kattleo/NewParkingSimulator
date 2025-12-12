@@ -1,6 +1,4 @@
-// ...existing includes...
 #include "common/debug.h"
-
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -38,9 +36,6 @@ bool assets_init(Map *map)
 
 // Add a field to Vehicle for real-time parking start (in ms since epoch)
 #include <stdint.h>
-
-// Add to Vehicle struct in vehicle.h:
-// uint64_t parking_start_time_ms;
 
 // Helper to get current time in ms
 static uint64_t now_ms() {
@@ -189,7 +184,6 @@ int main(void)
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next)
             screen_draw_vehicle(&screen, &node->vehicle, &map);
 
-        // (Obsolete VEH_LEAVING back out logic removed; see below for correct per-vehicle logic)
         // 3) Present
         screen_present(&screen, &map, step);
 

@@ -12,8 +12,6 @@ static int car_fits_at(const struct Map *map, int x, int y, int w, int h) {
             int tx = x + dx;
             int ty = y + dy;
             if (!map_is_walkable(map, tx, ty)) {
-                // printf("car_fits_at: blocked at (%d,%d) by tile type %d\n", tx, ty, map->tiles[ty][tx].type);
-                // fflush(stdout);
                 return 0;
             }
         }
@@ -57,12 +55,12 @@ bool path_find_with_size(const struct Map *map,
     }
 
 
-    // --- A* implementation ---
+    // --- Path finding implementation ---
     typedef struct {
         int idx;
         int f; // total cost = g + h
     } HeapNode;
-    // Simple binary min-heap for up to num_cells
+    // Binary min-heap for up to num_cells
     HeapNode *heap = malloc(num_cells * sizeof(HeapNode));
     int heap_size = 0;
     int *g_score = malloc(num_cells * sizeof(int));

@@ -29,4 +29,4 @@ void screen_present(const Screen *s, const Map *map, int step);
 
 void screen_draw_paths(Screen *s, const VehicleList *vehicles);
 
-#endif // RENDER_H
+#endif

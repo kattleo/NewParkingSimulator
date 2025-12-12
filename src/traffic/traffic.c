@@ -56,7 +56,7 @@ void traffic_step(VehicleList *list, Map *map)
     {
         Vehicle *v = &node->vehicle;
 
-        // --- PARKING LOGIC ---
+        // Parking logic
         // Only consider parking if not already parking or parked
         if (!v->going_to_parking && v->state != VEH_PARKED) {
             // Look for a free parking spot (prefer nearby, fallback to global)
@@ -110,7 +110,7 @@ void traffic_step(VehicleList *list, Map *map)
             }
         }
 
-        // --- PARKING ARRIVAL/LEAVE LOGIC ---
+        // 
         if (v->going_to_parking && v->parking_spot_id >= 0 && v->assigned_spot) {
             ParkingSpot *spot = v->assigned_spot;
             // Consider parked when vehicle's anchor reaches the spot's anchor
@@ -132,7 +132,7 @@ void traffic_step(VehicleList *list, Map *map)
             v->parking_spot_id = -1;
         }
 
-        // --- WAYPOINT-FOLLOWING LOGIC (if not parking) ---
+        // Waypoint-following logic (if not parking)
         if (!v->going_to_parking && v->route_length > 0 && v->route_pos < v->route_length) {
             int target_id = v->route[v->route_pos];
             const Waypoint *w = map_get_waypoint_by_id(map, target_id);
@@ -268,5 +268,4 @@ void traffic_update_parking_states(Vehicle *v, Map *map)
 
     // arrived at parking anchor
     v->state = VEH_PARKED;
-    // keep spot->occupied = 1
 }

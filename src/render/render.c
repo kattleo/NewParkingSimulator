@@ -58,7 +58,7 @@ void screen_from_map(Screen *s, const Map *map)
 
 void screen_draw_vehicle(Screen *s, const Vehicle *v, const Map *map)
 {
-    (void)map; // not needed right now, but might be useful later
+    (void)map; // not needed right now, maybe later
 
     const Sprite *spr = vehicle_get_sprite(v);
     if (!spr)
@@ -92,7 +92,7 @@ void screen_present(const Screen *s, const Map *map, int step)
     {
         for (int x = 0; x < s->width; ++x)
         {
-            // ---- Parking Indicator Logic ----
+            // Parking Indicator Logic
             Tile *t = &map->tiles[y][x];
             if (t->type == TILE_PARKING_INDICATOR)
             {
@@ -108,7 +108,6 @@ void screen_present(const Screen *s, const Map *map, int step)
 
                 continue;
             }
-            // ---------------------------------
 
             // Gate rendering: check if this tile is part of a gate (render before map buffer)
             int is_gate_tile = 0;
