@@ -28,12 +28,15 @@ bool map_load(Map *map, const char *filename)
     // Set gate closed by default (will be set after parsing)
     map->gate.open = 0;
     map->gate.tile_count = 0;
-    FILE *f = fopen(filename, "r");
-    if (!f)
-    {
     map->has_start = 0;
     map->start_x = -1;
     map->start_y = -1;
+    map->has_end = 0;
+    map->end_x = -1;
+    map->end_y = -1;
+    FILE *f = fopen(filename, "r");
+    if (!f)
+    {
         perror("Failed to open map file");
         return false;
     }
@@ -133,6 +136,13 @@ bool map_load(Map *map, const char *filename)
                 map->start_x = x;
                 map->start_y = y;
                 map->has_start = 1;
+                c2 = ' ';
+            }
+            // Detect end position
+            if (c2 == 'E') {
+                map->end_x = x;
+                map->end_y = y;
+                map->has_end = 1;
                 c2 = ' ';
             }
             // Detect gate (vertical run of 'G')

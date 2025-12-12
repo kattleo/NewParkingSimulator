@@ -57,6 +57,8 @@ typedef struct Vehicle
 
     int parking_spot_id;  // -1 = none
     int going_to_parking; // bool-ish
+    int parking_time; // ms parked (reset when not parked)
+    int reverse_steps_remaining; // for backing out
 } Vehicle;
 
 // Initialize global/default vehicle sprites from 4 txt files

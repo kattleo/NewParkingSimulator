@@ -60,6 +60,10 @@ typedef struct Map
     int start_x;
     int start_y;
     int has_start;
+    // End position (set by 'E' in map)
+    int end_x;
+    int end_y;
+    int has_end;
 } Map;
 
 bool map_load(Map *map, const char *filename);

@@ -8,7 +8,8 @@ typedef enum
     TILE_EMPTY,
     TILE_WALL,
     TILE_PARKING,
-    TILE_PARKING_INDICATOR
+    TILE_PARKING_INDICATOR,
+    TILE_EXIT
 } TileType;
 
 struct ParkingSpot; // forward declaration (NO typedef!)
