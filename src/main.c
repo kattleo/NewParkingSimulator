@@ -1,6 +1,45 @@
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <sys/time.h>
+#include <string.h>
+// Config struct for simulation settings
+typedef struct {
+    int min_parking_time_sec;
+    int max_parking_time_sec;
+    int frame_dt_ms;
+    int show_intro;
+    int debug_logs;
+} Config;
+
+// Load config from file (simple key = value, ignores comments)
+void config_load(Config *cfg, const char *filename) {
+    // Set defaults
+    cfg->min_parking_time_sec = 3;
+    cfg->max_parking_time_sec = 10;
+    cfg->frame_dt_ms = 150;
+    cfg->show_intro = 1;
+    cfg->debug_logs = 1;
+    FILE *f = fopen(filename, "r");
+    if (!f) return;
+    char line[128];
+    while (fgets(line, sizeof(line), f)) {
+        if (line[0] == '#' || strlen(line) < 3) continue;
+        char key[64]; int val;
+        if (sscanf(line, "%63[^=]=%d", key, &val) == 2) {
+            char *p = key;
+            while (*p == ' ' || *p == '\t') ++p;
+            if (strstr(p, "min_parking_time_sec")) cfg->min_parking_time_sec = val;
+            else if (strstr(p, "max_parking_time_sec")) cfg->max_parking_time_sec = val;
+            else if (strstr(p, "frame_dt_ms")) cfg->frame_dt_ms = val;
+            else if (strstr(p, "show_intro")) cfg->show_intro = val;
+            else if (strstr(p, "debug_logs")) cfg->debug_logs = val;
+        }
+    }
+    fclose(f);
+}
 
 
 #include "map/map.h"
@@ -31,8 +70,23 @@ bool assets_init(Map *map)
     return true;
 }
 
+// Add a field to Vehicle for real-time parking start (in ms since epoch)
+#include <stdint.h>
+
+// Add to Vehicle struct in vehicle.h:
+// uint64_t parking_start_time_ms;
+
+// Helper to get current time in ms
+static uint64_t now_ms() {
+    struct timeval tv;
+    gettimeofday(&tv, NULL);
+    return (uint64_t)tv.tv_sec * 1000 + tv.tv_usec / 1000;
+}
+
 int main(void)
 {
+    Config config;
+    config_load(&config, "assets/config.txt");
     Map map;
     if (!assets_init(&map))
         return 1;
@@ -51,7 +105,7 @@ int main(void)
     Game game = {0};
     game.account_balance = 0;
 
-    const int FRAME_DT_MS = 150;
+    const int FRAME_DT_MS = config.frame_dt_ms;
     enum Phase { PHASE_SPAWN, PHASE_WAIT_OPEN, PHASE_OPEN, PHASE_WAIT_CLOSE, PHASE_WAIT_SPAWN };
     enum Phase phase = PHASE_SPAWN;
     int phase_timer = 0;
@@ -62,6 +116,16 @@ int main(void)
 
     // Ensure gate is closed at start
     map_set_gate_open(&map, 0);
+
+    if (config.show_intro) {
+        FILE *logo = fopen("assets/logo.txt", "r");
+        if (logo) {
+            char buf[128];
+            while (fgets(buf, sizeof(buf), logo)) fputs(buf, stdout);
+            fclose(logo);
+            printf("\n");
+        }
+    }
 
     for (int step = 0; step < 500; ++step) {
         // State machine for gate/vehicle logic
@@ -146,19 +210,37 @@ int main(void)
         // --- Stat Board ---
         printf("\n=== Vehicle Overview ===\n");
         printf("%-10s %-12s %-12s\n", "VehicleID", "State", "ParkingTime (s)");
+            printf("%-10s %-12s %-15s %-15s\n", "VehicleID", "State", "ParkingTime (s)", "Remaining (s)");
         int vid = 0;
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next, ++vid) {
             Vehicle *v = &node->vehicle;
-            // Increment parking_time if parked
+            // Assign parking time and set real start time
             if (v->state == VEH_PARKED) {
-                v->parking_time += FRAME_DT_MS;
-                if (v->parking_time >= 3000) {
-                    printf("[DEBUG] Vehicle %d: Parking time elapsed, switching to LEAVING.\n", vid);
+                if (v->parking_time_sec == 0) {
+                    int min_sec = config.min_parking_time_sec;
+                    int max_sec = config.max_parking_time_sec;
+                    if (max_sec < min_sec) max_sec = min_sec;
+                    v->parking_time_sec = min_sec + rand() % (max_sec - min_sec + 1);
+                    v->parking_start_time_ms = now_ms();
+                    if (config.debug_logs)
+                        printf("[DEBUG] Vehicle %d: Assigned random parking time: %d s, start_time_ms: %llu\n", vid, v->parking_time_sec, (unsigned long long)v->parking_start_time_ms);
+                }
+                uint64_t elapsed_ms = now_ms() - v->parking_start_time_ms;
+                int remaining_ms = v->parking_time_sec * 1000 - (int)elapsed_ms;
+                if (remaining_ms < 0) remaining_ms = 0;
+                v->parking_time_remaining = remaining_ms;
+                if (v->parking_time_remaining <= 0) {
+                    if (config.debug_logs)
+                        printf("[DEBUG] Vehicle %d: Parking time elapsed, switching to LEAVING.\n", vid);
                     v->state = VEH_LEAVING;
                     const Sprite *spr = vehicle_get_sprite(v);
                     v->reverse_steps_remaining = spr->width + 2; // Back out 2 extra tiles for testing
-                    printf("[DEBUG] Vehicle %d: Starting to reverse out (%d steps)\n", vid, v->reverse_steps_remaining);
+                    if (config.debug_logs)
+                        printf("[DEBUG] Vehicle %d: Starting to reverse out (%d steps)\n", vid, v->reverse_steps_remaining);
                 }
+            } else {
+                // Reset for next time parked
+                v->parking_time_sec = (v->state == VEH_LEAVING || v->state == VEH_EXIT_QUEUE || v->state == VEH_DRIVING) ? v->parking_time_sec : 0;
             }
             const char *state_str = "";
             switch (v->state) {
@@ -169,9 +251,8 @@ int main(void)
                 case VEH_EXIT_QUEUE: state_str = "ExitQueue"; break;
                 default: state_str = "Unknown"; break;
             }
-            // Print parking time in seconds (rounded)
-            int parking_time_sec = v->parking_time / 1000;
-            printf("%-10d %-12s %-12d\n", vid, state_str, parking_time_sec);
+            int remaining_sec = (v->state == VEH_PARKED) ? (v->parking_time_remaining + 999) / 1000 : 0;
+            printf("%-10d %-12s %-15d %-15d\n", vid, state_str, v->parking_time_sec, remaining_sec);
         }
         // --- Back out logic for VEH_LEAVING ---
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next) {
@@ -182,11 +263,10 @@ int main(void)
                     map.gate_exit.open = 0;
                     printf("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
                 }
-                // Add money to account based on parking time and mark for deletion
-                int parked_seconds = v->parking_time / 1000;
-                int payout = parked_seconds * 10;
+                // Add money to account based on parking_time_sec and mark for deletion
+                int payout = v->parking_time_sec * 10;
                 game.account_balance += payout;
-                printf("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, parked_seconds);
+                printf("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, v->parking_time_sec);
                 v->state = -1; // Mark for deletion
             }
             // Handle exit gate opening for single vehicle

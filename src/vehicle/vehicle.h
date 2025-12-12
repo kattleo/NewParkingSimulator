@@ -1,6 +1,7 @@
 #ifndef VEHICLE_H
 #define VEHICLE_H
 
+#include <stdint.h>
 #include "../map/map.h"
 #include "../common/direction.h"
 #include "../path/path.h"
@@ -40,12 +41,14 @@ typedef struct Vehicle
     int y;
     Direction dir;
     const VehicleSprites *sprites; // pointer to shared sprites
-
     // Car follows route across waypoints
     // It reaches every waypoint with a path
     Path path;
     int path_index; // index of next step in path
     int has_path;
+    int parking_time_sec; // Fixed parking time (seconds)
+    int parking_time_remaining; // Live countdown (ms)
+    uint64_t parking_start_time_ms; // Real wall clock start time (ms since epoch)
 
     int route[MAX_ROUTE_WAYPOINTS]; // sequence of waypoint IDs
     int route_length;

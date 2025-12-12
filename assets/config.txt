@@ -1,0 +1,16 @@
+# Parking Simulator Configuration
+# Lines starting with # are comments
+
+# Minimum parking time in seconds
+min_parking_time_sec = 3
+# Maximum parking time in seconds
+max_parking_time_sec = 10
+
+# Frame duration in ms (simulation step speed)
+frame_dt_ms = 300
+
+# Show intro logo (1 = yes, 0 = no)
+show_intro = 1
+
+# Enable debug logs (1 = yes, 0 = no)
+debug_logs = 0
