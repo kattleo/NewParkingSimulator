@@ -159,14 +159,15 @@ void map_build_parking_spots(Map *map)
 
     for (int y = 0; y < map->height - 1; ++y)
     {
-        for (int x = 0; x < map->width - 5; ++x)
+        // Detect parking spots as 2x8 blocks of TILE_PARKING
+        for (int x = 0; x < map->width - 7; ++x)
         {
-            // Check if a 2×6 block of TILE_PARKING begins here
+            // Check if a 2×8 block of TILE_PARKING begins here
             int is_parking = 1;
 
             for (int dy = 0; dy < 2 && is_parking; ++dy)
             {
-                for (int dx = 0; dx < 6; ++dx)
+                for (int dx = 0; dx < 8; ++dx)
                 {
                     if (map->tiles[y + dy][x + dx].type != TILE_PARKING)
                     {
@@ -187,7 +188,7 @@ void map_build_parking_spots(Map *map)
 
                 spot->x0 = x;
                 spot->y0 = y;
-                spot->width = 6;
+                spot->width = 8;
                 spot->height = 2;
 
                 spot->occupied = 0;
@@ -206,10 +207,10 @@ void map_build_parking_spots(Map *map)
                     spot->indicator_y = y;
                 }
                 // Right side
-                else if (x + 6 < map->width &&
-                         map->tiles[y][x + 6].symbol == '|')
+                else if (x + 8 < map->width &&
+                         map->tiles[y][x + 8].symbol == '|')
                 {
-                    spot->indicator_x = x + 6;
+                    spot->indicator_x = x + 8;
                     spot->indicator_y = y;
                 }
 
@@ -221,13 +222,16 @@ void map_build_parking_spots(Map *map)
                     // Mark tile underneath as belonging to this spot
                     Tile *t2 = &map->tiles[spot->indicator_y + 1][spot->indicator_x];
                     t2->type = TILE_PARKING_INDICATOR;
+                    // Link indicator tiles to this spot for renderer
+                    t1->spot = spot;
+                    t2->spot = spot;
                 }
 
                 map->parking_count++;
             }
 
-            // Skip the remaining 5 tiles so we don't detect the same spot again
-            x += 5;
+            // Skip the remaining 7 tiles so we don't detect the same spot again
+            x += 7;
         }
     }
 }

@@ -55,50 +55,108 @@ void traffic_step(VehicleList *list, Map *map)
     {
         Vehicle *v = &node->vehicle;
 
-        // Already assigned to a parking spot?
-        if (v->state == VEH_DRIVING && !v->wants_parking)
-        {
-            ParkingSpot *spot = traffic_find_near_free_spot(v, map, 8);
-
-            if (spot)
-            {
-                printf("Vehicle %d: found parking spot at (%d,%d)\n",
-                       spot->x0, spot->y0);
-
-                v->wants_parking = true;
+        // --- PARKING LOGIC ---
+        // Only consider parking if not already parking or parked
+        if (!v->going_to_parking && v->state != VEH_PARKED) {
+            // Look for a free parking spot (prefer nearby, fallback to global)
+            printf("[traffic] Vehicle at (%d,%d) seeking parking (radius=%d)\n", v->x, v->y, 12);
+            ParkingSpot *spot = traffic_find_near_free_spot(v, map, 12);
+            if (spot && !spot->occupied) {
+                v->going_to_parking = 1;
+                v->parking_spot_id = spot->id;
                 v->assigned_spot = spot;
-                spot->occupied = true;
+                spot->occupied = 1;
                 spot->occupant = v;
-
-                // Create path to the anchor
+                printf("[traffic] Assigned parking spot id=%d anchor=(%d,%d) size=%dx%d\n", spot->id, spot->x0, spot->y0, spot->width, spot->height);
+                // Primary: drive to the spot's anchor (upper-left of the block)
                 Path p;
                 path_init(&p);
-                if (path_find(map, v->x, v->y, spot->x0, spot->y0, &p))
-                {
+                const Sprite *spr = vehicle_get_sprite(v);
+                int car_w = spr->width;
+                int car_h = spr->height;
+                int found = 0;
+                printf("[traffic] Attempt path to spot anchor (%d,%d)\n", spot->x0, spot->y0);
+                if (path_find_with_size(map, v->x, v->y, spot->x0, spot->y0, car_w, car_h, &p)) {
                     vehicle_set_path(v, &p);
                     v->state = VEH_PARKING;
-                    continue; // skip waypoint logic
+                    printf("[traffic] Anchor path success: length=%d\n", p.length);
+                    found = 1;
+                } else {
+                    // Fallback: try any valid position inside the parking area
+                    printf("[traffic] Anchor path failed; scanning inside spot for alternative positions\n");
+                    for (int py = spot->y0; py <= spot->y0 + spot->height - car_h; ++py) {
+                        for (int px = spot->x0; px <= spot->x0 + spot->width - car_w; ++px) {
+                            if (path_find_with_size(map, v->x, v->y, px, py, car_w, car_h, &p)) {
+                                vehicle_set_path(v, &p);
+                                v->state = VEH_PARKING;
+                                printf("[traffic] Fallback path success to (%d,%d): length=%d\n", px, py, p.length);
+                                found = 1;
+                                break;
+                            }
+                        }
+                        if (found) break;
+                    }
                 }
-                else
-                {
-                    // can't reach it, make it free again
-                    spot->occupied = false;
-                    spot->occupant = NULL;
-                    v->wants_parking = false;
+                if (!found) {
+                    // If no path, give up parking for now
+                    printf("[traffic] No valid path into spot id=%d; releasing reservation\n", spot->id);
+                    v->going_to_parking = 0;
+                    v->parking_spot_id = -1;
                     v->assigned_spot = NULL;
+                    spot->occupied = 0;
+                    spot->occupant = NULL;
                 }
             }
         }
 
-        // If vehicle is parking and has reached its spot
-        if (v->state == VEH_PARKING && !v->has_path)
-        {
-            v->state = VEH_PARKED;
-            printf("Vehicle parked!\n");
-            continue;
+        // --- PARKING ARRIVAL LOGIC ---
+        if (v->going_to_parking && v->parking_spot_id >= 0 && v->assigned_spot) {
+            ParkingSpot *spot = v->assigned_spot;
+            // Consider parked when vehicle's anchor reaches the spot's anchor
+            int parked = (v->x == spot->x0 && v->y == spot->y0);
+            if (parked && !v->has_path) {
+                v->state = VEH_PARKED;
+                // Spot remains occupied
+                // Optionally: print debug
+                printf("[traffic] Vehicle parked at spot id=%d anchor=(%d,%d)\n", spot->id, spot->x0, spot->y0);
+            }
         }
 
-        //  OTHERWISE: old waypoint-driving logic …
+        // --- WAYPOINT-FOLLOWING LOGIC (if not parking) ---
+        if (!v->going_to_parking && v->route_length > 0 && v->route_pos < v->route_length) {
+            int target_id = v->route[v->route_pos];
+            const Waypoint *w = map_get_waypoint_by_id(map, target_id);
+            if (w) {
+                const Sprite *spr = vehicle_get_sprite(v);
+                int reached = 0;
+                for (int sy = 0; sy < spr->height && !reached; ++sy) {
+                    for (int sx = 0; sx < spr->width && !reached; ++sx) {
+                        char c = spr->rows[sy][sx];
+                        if (c == ' ') continue;
+                        int tx = v->x + sx;
+                        int ty = v->y + sy;
+                        if (tx == w->x && ty == w->y) {
+                            reached = 1;
+                        }
+                    }
+                }
+                if (reached && !v->has_path) {
+                    v->route_pos++;
+                    if (v->route_pos < v->route_length) {
+                        // Plan path to next waypoint
+                        int next_id = v->route[v->route_pos];
+                        const Waypoint *next_w = map_get_waypoint_by_id(map, next_id);
+                        if (next_w) {
+                            Path p;
+                            path_init(&p);
+                            if (path_find(map, v->x, v->y, next_w->x, next_w->y, &p)) {
+                                vehicle_set_path(v, &p);
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // Move everyone + collision control
@@ -110,6 +168,13 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
     ParkingSpot *best = NULL;
     int best_d2 = 999999;
 
+    // Get vehicle bounding box
+    const Sprite *spr = vehicle_get_sprite(v);
+    int vx0 = v->x;
+    int vy0 = v->y;
+    int vx1 = vx0 + spr->width - 1;
+    int vy1 = vy0 + spr->height - 1;
+
     for (int i = 0; i < map->parking_count; ++i)
     {
         ParkingSpot *p = &map->parkings[i];
@@ -117,13 +182,33 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
         if (p->occupied)
             continue;
 
-        int dx = p->x0 - v->x;
-        int dy = p->y0 - v->y;
+        // Parking area bounding box
+        int px0 = p->x0;
+        int py0 = p->y0;
+        int px1 = px0 + p->width - 1;
+        int py1 = py0 + p->height - 1;
+
+        // Compute minimal squared distance between vehicle bbox and parking bbox
+        int dx = 0, dy = 0;
+        if (vx1 < px0)
+            dx = px0 - vx1;
+        else if (vx0 > px1)
+            dx = vx0 - px1;
+        else
+            dx = 0;
+
+        if (vy1 < py0)
+            dy = py0 - vy1;
+        else if (vy0 > py1)
+            dy = vy0 - py1;
+        else
+            dy = 0;
 
         int dist2 = dx * dx + dy * dy;
 
         if (dist2 <= radius * radius)
         {
+            printf("[traffic] Spot id=%d within radius: dist2=%d (occupied=%d)\n", p->id, dist2, p->occupied);
             if (dist2 < best_d2)
             {
                 best = p;
@@ -131,6 +216,35 @@ ParkingSpot *traffic_find_near_free_spot(Vehicle *v, Map *map, int radius)
             }
         }
     }
+    if (best) {
+        printf("[traffic] Selected nearby spot id=%d (dist2=%d)\n", best->id, best_d2);
+        return best;
+    }
+
+    // Fallback: pick globally nearest free spot regardless of radius
+    best_d2 = 999999;
+    for (int i = 0; i < map->parking_count; ++i)
+    {
+        ParkingSpot *p = &map->parkings[i];
+
+        if (p->occupied)
+            continue;
+
+        // measure by anchor distance to favor intended target
+        int dx = p->x0 - v->x;
+        int dy = p->y0 - v->y;
+        int dist2 = dx * dx + dy * dy;
+
+        if (dist2 < best_d2)
+        {
+            best = p;
+            best_d2 = dist2;
+        }
+    }
+    if (best)
+        printf("[traffic] No spot within radius=%d; selecting global nearest id=%d (dist2=%d)\n", radius, best->id, best_d2);
+    else
+        printf("[traffic] No free parking spots available\n");
     return best;
 }
 

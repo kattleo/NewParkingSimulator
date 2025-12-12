@@ -22,10 +22,17 @@ typedef struct
 // Initialize a path (sets length to 0)
 void path_init(Path *p);
 
-// Find a shortest path from (sx, sy) to (gx, gy) on the given map using BFS.
-// Returns true on success and fills out_path with the path
-// (steps[0] = start, steps[length-1] = goal).
-// Returns false if no path found or if it would exceed MAX_PATH_STEPS.
+
+// Find a shortest path from (sx, sy) to (gx, gy) for a car of given size and orientation.
+// Returns true on success and fills out_path with the path.
+// Only steps where the car's full footprint fits are allowed.
+bool path_find_with_size(const struct Map *map,
+                        int sx, int sy,
+                        int gx, int gy,
+                        int car_width, int car_height,
+                        Path *out_path);
+
+// Legacy: single-tile pathfinding (for non-cars)
 bool path_find(const struct Map *map,
                int sx, int sy,
                int gx, int gy,
