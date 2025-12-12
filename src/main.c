@@ -55,7 +55,13 @@ int main(void)
         {
             Vehicle v;
             // same position & direction as your old v1: (133, 27), DIR_EAST
-            vehicle_init(&v, 133, 27, DIR_EAST);
+            // Initialize vehicle at map start position if present
+            int vx = 133, vy = 27;
+            if (map.has_start) {
+                vx = map.start_x;
+                vy = map.start_y;
+            }
+            vehicle_init(&v, vx, vy, DIR_EAST);
 
             // add to list (copied into node->vehicle)
             vehicle_list_push_back(&vehicles, &v);

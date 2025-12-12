@@ -12,6 +12,9 @@ bool map_load(Map *map, const char *filename)
     FILE *f = fopen(filename, "r");
     if (!f)
     {
+    map->has_start = 0;
+    map->start_x = -1;
+    map->start_y = -1;
         perror("Failed to open map file");
         return false;
     }
@@ -105,18 +108,26 @@ bool map_load(Map *map, const char *filename)
 
         for (int x = 0; x < map->width; ++x)
         {
-            char c = ' ';
+            char c2 = ' ';
             if (x < line_len)
             {
-                c = line[x];
+                c2 = line[x];
             }
 
-            Tile t = tile_from_char(c);
+            // Detect start position
+            if (c2 == 'S') {
+                map->start_x = x;
+                map->start_y = y;
+                map->has_start = 1;
+                c2 = ' '; // Remove 'S' from map
+            }
+
+            Tile t = tile_from_char(c2);
 
             // waypoint detection
-            if (c >= '1' && c <= '9')
+            if (c2 >= '1' && c2 <= '9')
             {
-                int id = c - '0';
+                int id = c2 - '0';
 
                 t.is_waypoint = true;
                 t.waypoint_id = id;

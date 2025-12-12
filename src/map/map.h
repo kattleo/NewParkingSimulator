@@ -48,6 +48,10 @@ typedef struct Map
     // waypoint fields...
     Waypoint waypoints[16];
     int waypoint_count;
+    // Start position (set by 'S' in map)
+    int start_x;
+    int start_y;
+    int has_start;
 
 } Map;
 
