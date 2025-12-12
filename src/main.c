@@ -4,45 +4,9 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/time.h>
+#include "common/game.h"
 #include <string.h>
-// Config struct for simulation settings
-typedef struct {
-    int min_parking_time_sec;
-    int max_parking_time_sec;
-    int frame_dt_ms;
-    int show_intro;
-    int debug_logs;
-} Config;
-
-// Load config from file (simple key = value, ignores comments)
-void config_load(Config *cfg, const char *filename) {
-    // Set defaults
-    cfg->min_parking_time_sec = 3;
-    cfg->max_parking_time_sec = 10;
-    cfg->frame_dt_ms = 150;
-    cfg->show_intro = 1;
-    cfg->debug_logs = 1;
-    FILE *f = fopen(filename, "r");
-    if (!f) return;
-    char line[128];
-    while (fgets(line, sizeof(line), f)) {
-        if (line[0] == '#' || strlen(line) < 3) continue;
-        char key[64]; int val;
-        if (sscanf(line, "%63[^=]=%d", key, &val) == 2) {
-            char *p = key;
-            while (*p == ' ' || *p == '\t') ++p;
-            if (strstr(p, "min_parking_time_sec")) cfg->min_parking_time_sec = val;
-            else if (strstr(p, "max_parking_time_sec")) cfg->max_parking_time_sec = val;
-            else if (strstr(p, "frame_dt_ms")) cfg->frame_dt_ms = val;
-            else if (strstr(p, "show_intro")) cfg->show_intro = val;
-            else if (strstr(p, "debug_logs")) cfg->debug_logs = val;
-        }
-    }
-    fclose(f);
-}
-
-
-#include "map/map.h"
+#include "common/menu.h"
 #include "common/menu.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_list.h"
@@ -50,9 +14,7 @@ void config_load(Config *cfg, const char *filename) {
 #include "traffic/traffic.h"
 #include "common/direction.h"
 
-typedef struct {
-    int account_balance;
-} Game;
+
 
 bool assets_init(Map *map)
 {
@@ -87,10 +49,21 @@ static uint64_t now_ms() {
 int main(void)
 {
     // Show menu before starting game
-    int mode = menu_show();
-    (void)mode; // Not used yet
+    int mode = menu_show(); // 0 = Smooth, 1 = Busy
     Config config;
     config_load(&config, "assets/config.txt");
+    // Set selected mode's parking times, spawn rate, and frame duration
+    if (mode == 0) {
+        config.min_parking_time_sec = config.min_parking_time_smooth;
+        config.max_parking_time_sec = config.max_parking_time_smooth;
+        config.spawn_rate_ms = config.spawn_rate_smooth;
+        config.frame_dt_ms = config.frame_dt_ms_smooth;
+    } else {
+        config.min_parking_time_sec = config.min_parking_time_busy;
+        config.max_parking_time_sec = config.max_parking_time_busy;
+        config.spawn_rate_ms = config.spawn_rate_busy;
+        config.frame_dt_ms = config.frame_dt_ms_busy;
+    }
     Map map;
     if (!assets_init(&map))
         return 1;
@@ -149,7 +122,7 @@ int main(void)
                 vehicle_steps = 0;
                 last_vehicle_x = vx;
                 last_vehicle_y = vy;
-                phase_timer = 1000; // 1 second
+                phase_timer = config.spawn_rate_ms; // Use mode-specific spawn rate
                 phase = PHASE_WAIT_OPEN;
                 break;
             }

@@ -1,10 +1,17 @@
 # Parking Simulator Configuration
 # Lines starting with # are comments
 
-# Minimum parking time in seconds
-min_parking_time_sec = 3
-# Maximum parking time in seconds
-max_parking_time_sec = 10
+# --- Smooth mode (default) ---
+frame_dt_ms_smooth = 200
+spawn_rate_smooth = 2000
+min_parking_time_smooth = 4
+max_parking_time_smooth = 10
+
+# --- Busy mode ---
+frame_dt_ms_busy = 100
+spawn_rate_busy = 100
+min_parking_time_busy = 1
+max_parking_time_busy = 3
 
 # Frame duration in ms (simulation step speed)
 frame_dt_ms = 300
