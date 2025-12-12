@@ -67,6 +67,9 @@ int main(void)
         config.frame_dt_ms = config.frame_dt_ms_busy;
     }
     debug_set_enabled(config.debug_logs);
+
+    // Start looping street ambience sound
+    system("play -q assets/sounds/street_ambience.mp3 repeat 9999 > /dev/null 2>&1 &");
     Map map;
     if (!assets_init(&map))
         return 1;
@@ -243,6 +246,7 @@ int main(void)
                 // Add money to account based on parking_time_sec and mark for deletion
                 int payout = v->parking_time_sec * 10;
                 game.account_balance += payout;
+                system("play assets/sounds/money_count.mp3 > /dev/null 2>&1 &");
                 debug_log("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, v->parking_time_sec);
                 v->state = -1; // Mark for deletion
             }

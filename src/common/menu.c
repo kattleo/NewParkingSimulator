@@ -54,10 +54,12 @@ int menu_show() {
         if (ch == 27) { // Escape sequence
             if (getch() == '[') {
                 ch = getch();
-                if (ch == 'A') { // Up arrow
-                    selected = (selected - 1 + n_modes) % n_modes;
-                } else if (ch == 'B') { // Down arrow
-                    selected = (selected + 1) % n_modes;
+                    if (ch == 'A') { // Up arrow
+                        selected = (selected - 1 + n_modes) % n_modes;
+                        system("play assets/sounds/menu_selection.mp3 > /dev/null 2>&1 &");
+                    } else if (ch == 'B') { // Down arrow
+                        selected = (selected + 1) % n_modes;
+                        system("play assets/sounds/menu_selection.mp3 > /dev/null 2>&1 &");
                 }
             }
         } else if (ch == '\n' || ch == '\r') {
