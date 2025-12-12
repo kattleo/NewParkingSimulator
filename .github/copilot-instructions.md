@@ -6,8 +6,6 @@ Quick start
 
 Execute `make` whenever applying changes to the source files. Fix any errors that occur automatically.
 
-To test changes, run `./main` and observe the terminal UI. Use Debug statements (e.g., `Vehicle has reached parking spot` or `Vehicle has reached checkpoint number x`) in the source code to trace logic as needed.
-
 High-level architecture (what to know first)
 - `src/map/` — ASCII map loader + parking detection. `assets/map.txt` encodes walls (`_`, `|`), park blocks `P`, and waypoint digits `1`..`9`.
 - `src/path/` — BFS pathfinder (4-way, no diagonals). Constraint: `MAX_PATH_STEPS = 1024`.
