@@ -51,11 +51,13 @@ static uint64_t now_ms() {
 
 int main(void)
 {
-    // Show animated logo before menu
-    show_logo_animated();
-    int mode = menu_show(); // 0 = Smooth, 1 = Busy
     Config config;
     config_load(&config, "assets/config.txt");
+    // Show animated logo before menu if enabled
+    if (config.show_intro) {
+        show_logo_animated();
+    }
+    int mode = menu_show(); // 0 = Smooth, 1 = Busy
     // Set selected mode's parking times, spawn rate, and frame duration
     if (mode == 0) {
         config.min_parking_time_sec = config.min_parking_time_smooth;
