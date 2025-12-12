@@ -9,6 +9,7 @@
 #include "common/game.h"
 #include <string.h>
 #include "common/menu.h"
+#include "common/logo.h"
 #include "common/menu.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_list.h"
@@ -50,7 +51,8 @@ static uint64_t now_ms() {
 
 int main(void)
 {
-    // Show menu before starting game
+    // Show animated logo before menu
+    show_logo_animated();
     int mode = menu_show(); // 0 = Smooth, 1 = Busy
     Config config;
     config_load(&config, "assets/config.txt");
