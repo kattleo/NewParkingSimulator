@@ -109,6 +109,26 @@ void screen_present(const Screen *s, const Map *map, int step)
             }
             // ---------------------------------
 
+            // Gate rendering: check if this tile is part of a gate (render before map buffer)
+            // Only one gate
+            int is_gate_tile = 0;
+            int gate_open = 1;
+            Gate *g = (Gate *)&map->gate;
+            for (int ti = 0; ti < g->tile_count; ++ti) {
+                if (g->xs[ti] == x && g->ys[ti] == y) {
+                    is_gate_tile = 1;
+                    gate_open = g->open;
+                    break;
+                }
+            }
+            if (is_gate_tile) {
+                if (gate_open)
+                    putchar(' ');
+                else
+                    printf("│");
+                continue;
+            }
+
             char c = s->buffer[y][x];
 
             switch (c)

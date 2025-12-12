@@ -46,9 +46,17 @@ int main(void)
     int spawn_timer_ms = 0; // first car spawns immediately
     const int FRAME_DT_MS = 150;
 
+    // Demo: Toggle the single gate open/closed every 100 steps
+    int gate_toggle = 0;
+
     // Game loop
     for (int step = 0; step < 500; ++step)
     {
+        // Toggle the single gate every 100 steps for demo
+        if (step % 100 == 0 && map.gate.tile_count > 0) {
+            gate_toggle = !gate_toggle;
+            map_set_gate_open(&map, gate_toggle);
+        }
         // 0) Spawning logic: one car every 5 seconds
         spawn_timer_ms -= FRAME_DT_MS;
         if (spawn_timer_ms <= 0)

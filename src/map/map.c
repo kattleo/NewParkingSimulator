@@ -1,4 +1,20 @@
+
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "map.h"
+#include "waypoint.h"
+
+void map_set_gate_open(Map *map, int open) {
+    assert(map);
+    map->gate.open = open ? 1 : 0;
+}
+
+int map_get_gate_open(const Map *map) {
+    assert(map);
+    return map->gate.open;
+}
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,6 +25,9 @@
 
 bool map_load(Map *map, const char *filename)
 {
+    // Set gate closed by default (will be set after parsing)
+    map->gate.open = 0;
+    map->gate.tile_count = 0;
     FILE *f = fopen(filename, "r");
     if (!f)
     {
@@ -100,48 +119,44 @@ bool map_load(Map *map, const char *filename)
         }
     }
 
-    // Fill tiles from lines
-    for (int y = 0; y < map->height; ++y)
-    {
+    // Gate parsing: collect all G tiles into a single vertical gate
+    map->gate.tile_count = 0;
+    for (int y = 0; y < map->height; ++y) {
         char *line = lines[y];
         int line_len = (int)strlen(line);
-
-        for (int x = 0; x < map->width; ++x)
-        {
+        for (int x = 0; x < map->width; ++x) {
             char c2 = ' ';
             if (x < line_len)
-            {
                 c2 = line[x];
-            }
-
             // Detect start position
             if (c2 == 'S') {
                 map->start_x = x;
                 map->start_y = y;
                 map->has_start = 1;
-                c2 = ' '; // Remove 'S' from map
+                c2 = ' ';
             }
-
+            // Detect gate (vertical run of 'G')
+            if (c2 == 'G') {
+                if (map->gate.tile_count < MAX_GATE_TILES) {
+                    map->gate.xs[map->gate.tile_count] = x;
+                    map->gate.ys[map->gate.tile_count] = y;
+                    map->gate.tile_count++;
+                }
+                c2 = ' ';
+            }
             Tile t = tile_from_char(c2);
-
             // waypoint detection
-            if (c2 >= '1' && c2 <= '9')
-            {
+            if (c2 >= '1' && c2 <= '9') {
                 int id = c2 - '0';
-
                 t.is_waypoint = true;
                 t.waypoint_id = id;
-
-                if (map->waypoint_count < MAX_WAYPOINTS)
-                {
+                if (map->waypoint_count < MAX_WAYPOINTS) {
                     map->waypoints[map->waypoint_count].id = id;
                     map->waypoints[map->waypoint_count].x = x;
                     map->waypoints[map->waypoint_count].y = y;
                     map->waypoint_count++;
                 }
             }
-
-            // store tile
             map->tiles[y][x] = t;
         }
     }
@@ -283,6 +298,16 @@ bool map_is_walkable(const Map *map, int x, int y)
 {
     if (!map_in_bounds(map, x, y))
         return false;
+
+    // Check if this tile is part of the closed gate
+    if (!map->gate.open) {
+        for (int ti = 0; ti < map->gate.tile_count; ++ti) {
+            if (map->gate.xs[ti] == x && map->gate.ys[ti] == y) {
+                return false;
+            }
+        }
+    }
+
     return map->tiles[y][x].symbol == ' ';
 }
 
@@ -316,9 +341,7 @@ void map_debug_print_parking(const Map *map)
     for (int i = 0; i < map->parking_count; ++i)
     {
         const ParkingSpot *s = &map->parkings[i];
-        printf("  Spot %d: cells=%d, anchor=(%d,%d), indicator=(%d,%d)\n",
-               s->id,
-               s->x0, s->y0,
-               s->indicator_x, s->indicator_y);
+         printf("  Spot %d: cells=%d, anchor=(%d,%d), indicator=(%d,%d)\n",
+             s->id, s->capacity, s->x0, s->y0, s->indicator_x, s->indicator_y);
     }
 }
