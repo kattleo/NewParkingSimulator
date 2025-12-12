@@ -76,7 +76,7 @@ int main(void)
                         vx = map.start_x;
                         vy = map.start_y;
                     }
-                    vehicle_init(&v, vx, vy, DIR_EAST);
+                    vehicle_init(&v, vx, vy, DIR_WEST);
                     vehicle_list_push_back(&vehicles, &v);
                     Vehicle *nv = &vehicles.tail->vehicle;
                     traffic_init_vehicle_route(nv, &map);
@@ -142,7 +142,7 @@ int main(void)
         printf("Account Balance: \033[92m%d\033[0m\n", game.account_balance);
         // --- Stat Board ---
         printf("\n=== Vehicle Overview ===\n");
-        printf("%-10s %-12s %-12s\n", "VehicleID", "State", "ParkingTime");
+        printf("%-10s %-12s %-12s\n", "VehicleID", "State", "ParkingTime (s)");
         int vid = 0;
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next, ++vid) {
             Vehicle *v = &node->vehicle;
@@ -152,13 +152,10 @@ int main(void)
                 if (v->parking_time >= 3000) {
                     printf("[DEBUG] Vehicle %d: Parking time elapsed, switching to LEAVING.\n", vid);
                     v->state = VEH_LEAVING;
-                    v->parking_time = 0;
                     const Sprite *spr = vehicle_get_sprite(v);
                     v->reverse_steps_remaining = spr->width + 2; // Back out 2 extra tiles for testing
                     printf("[DEBUG] Vehicle %d: Starting to reverse out (%d steps)\n", vid, v->reverse_steps_remaining);
                 }
-            } else {
-                v->parking_time = 0;
             }
             const char *state_str = "";
             switch (v->state) {
@@ -168,7 +165,9 @@ int main(void)
                 case VEH_LEAVING: state_str = "Leaving"; break;
                 default: state_str = "Unknown"; break;
             }
-            printf("%-10d %-12s %-12d\n", vid, state_str, v->parking_time);
+            // Print parking time in seconds (rounded)
+            int parking_time_sec = v->parking_time / 1000;
+            printf("%-10d %-12s %-12d\n", vid, state_str, parking_time_sec);
         }
         // --- Back out logic for VEH_LEAVING ---
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next) {
