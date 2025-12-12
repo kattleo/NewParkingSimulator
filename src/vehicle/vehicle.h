@@ -14,7 +14,8 @@ typedef enum
     VEH_DRIVING,
     VEH_PARKING,
     VEH_PARKED,
-    VEH_LEAVING
+    VEH_LEAVING,
+    VEH_EXIT_QUEUE
 } VehicleState;
 
 typedef struct

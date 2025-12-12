@@ -51,8 +51,9 @@ typedef struct Map
     Tile **tiles;
     ParkingSpot parkings[128];
     int parking_count;
-    // Single gate
-    Gate gate;
+    // Entry and exit gates
+    Gate gate_entry; // 'G'
+    Gate gate_exit;  // 'g'
     // waypoint fields...
     Waypoint waypoints[16];
     int waypoint_count;

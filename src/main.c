@@ -163,6 +163,7 @@ int main(void)
                 case VEH_PARKING: state_str = "Parking"; break;
                 case VEH_PARKED: state_str = "Parked"; break;
                 case VEH_LEAVING: state_str = "Leaving"; break;
+                case VEH_EXIT_QUEUE: state_str = "ExitQueue"; break;
                 default: state_str = "Unknown"; break;
             }
             // Print parking time in seconds (rounded)
@@ -172,6 +173,51 @@ int main(void)
         // --- Back out logic for VEH_LEAVING ---
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next) {
             Vehicle *v = &node->vehicle;
+            // When vehicle reaches (0,1), close the gate again
+            if (v->state == VEH_DRIVING && v->x == 0 && v->y == 1) {
+                if (map.gate_exit.open) {
+                    map.gate_exit.open = 0;
+                    printf("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
+                }
+                // Add money to account based on parking time and mark for deletion
+                int parked_seconds = v->parking_time / 1000;
+                int payout = parked_seconds * 10;
+                game.account_balance += payout;
+                printf("[DEBUG] Vehicle at (0,1) exited. +%d to account for %d seconds parked. Marking for removal.\n", payout, parked_seconds);
+                v->state = -1; // Mark for deletion
+            }
+            // Handle exit gate opening for single vehicle
+            // Transition to exit queue and immediately assign path if vehicle reaches 'E' tile (exit entry spot)
+            if ((v->state == VEH_DRIVING || v->state == VEH_EXIT_QUEUE) && map.has_end && v->x == map.end_x && v->y == map.end_y) {
+                if (!map.gate_exit.open) {
+                    map.gate_exit.open = 1;
+                    printf("[DEBUG] Exit gate opened for vehicle %d.\n", vid);
+                }
+                v->state = VEH_EXIT_QUEUE;
+                v->has_path = 0;
+                printf("[DEBUG] Vehicle %d: Reached exit entry spot ('E'), now in exit queue.\n", vid);
+                // Set path goal to (0,1)
+                int target_x = 0, target_y = 1;
+                const Sprite *spr = vehicle_get_sprite(v);
+                printf("[DEBUG] Car sprite width: %d, height: %d\n", spr ? spr->width : -1, spr ? spr->height : -1);
+                Path p; path_init(&p);
+                int found = path_find(&map, v->x, v->y, target_x, target_y, &p);
+                printf("[DEBUG] path_find to (%d,%d) returned %d, path length: %d\n", target_x, target_y, found, p.length);
+                if (found) {
+                    vehicle_set_path(v, &p);
+                    v->state = VEH_DRIVING;
+                    printf("[DEBUG] Vehicle %d: Path to (%d,%d) set, now driving to exit (0,1).\n", vid, target_x, target_y);
+                } else {
+                    printf("[DEBUG] Vehicle %d: Failed to set path to (%d,%d)!\n", vid, target_x, target_y);
+                }
+            }
+            // When vehicle reaches (0,1), close the gate again
+            if (v->state == VEH_DRIVING && v->x == 0 && v->y == 1) {
+                if (map.gate_exit.open) {
+                    map.gate_exit.open = 0;
+                    printf("[DEBUG] Exit gate closed after vehicle reached (0,1).\n");
+                }
+            }
             if (v->state == VEH_LEAVING && v->reverse_steps_remaining > 0) {
                 printf("[DEBUG] Vehicle at (%d,%d) in LEAVING, reverse_steps_remaining=%d\n", v->x, v->y, v->reverse_steps_remaining);
                 // Move in the opposite direction of v->dir
@@ -228,8 +274,25 @@ int main(void)
         }
         // 4) One traffic simulation step (move + path replanning)
         traffic_step(&vehicles, &map);
-        usleep(FRAME_DT_MS * 1000);
+        usleep(FRAME_DT_MS * 500); // double speed for debugging
         total_steps++;
+            // Remove vehicles marked for deletion
+            VehicleNode *prev = NULL;
+            VehicleNode *node = vehicles.head;
+            while (node) {
+                Vehicle *v = &node->vehicle;
+                VehicleNode *next = node->next;
+                if (v->state == -1) {
+                    if (prev) prev->next = next;
+                    else vehicles.head = next;
+                    if (vehicles.tail == node) vehicles.tail = prev;
+                    free(node);
+                    node = next;
+                    continue;
+                }
+                prev = node;
+                node = next;
+            }
     }
 
     vehicle_list_clear(&vehicles);

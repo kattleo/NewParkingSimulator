@@ -8,12 +8,12 @@
 
 void map_set_gate_open(Map *map, int open) {
     assert(map);
-    map->gate.open = open ? 1 : 0;
+    map->gate_entry.open = open ? 1 : 0;
 }
 
 int map_get_gate_open(const Map *map) {
     assert(map);
-    return map->gate.open;
+    return map->gate_entry.open;
 }
 
 #include <stdio.h>
@@ -26,8 +26,10 @@ int map_get_gate_open(const Map *map) {
 bool map_load(Map *map, const char *filename)
 {
     // Set gate closed by default (will be set after parsing)
-    map->gate.open = 0;
-    map->gate.tile_count = 0;
+    map->gate_entry.open = 0;
+    map->gate_entry.tile_count = 0;
+    map->gate_exit.open = 0;
+    map->gate_exit.tile_count = 0;
     map->has_start = 0;
     map->start_x = -1;
     map->start_y = -1;
@@ -122,8 +124,7 @@ bool map_load(Map *map, const char *filename)
         }
     }
 
-    // Gate parsing: collect all G tiles into a single vertical gate
-    map->gate.tile_count = 0;
+    // Gate parsing: handled per gate_entry/gate_exit above
     for (int y = 0; y < map->height; ++y) {
         char *line = lines[y];
         int line_len = (int)strlen(line);
@@ -138,19 +139,35 @@ bool map_load(Map *map, const char *filename)
                 map->has_start = 1;
                 c2 = ' ';
             }
-            // Detect end position
+            // Detect end position (exit entry spot)
             if (c2 == 'E') {
                 map->end_x = x;
                 map->end_y = y;
                 map->has_end = 1;
                 c2 = ' ';
             }
-            // Detect gate (vertical run of 'G')
+            // Detect start position
+            if (c2 == 'S') {
+                map->start_x = x;
+                map->start_y = y;
+                map->has_start = 1;
+                c2 = ' ';
+            }
+            // Detect entry gate ('G')
             if (c2 == 'G') {
-                if (map->gate.tile_count < MAX_GATE_TILES) {
-                    map->gate.xs[map->gate.tile_count] = x;
-                    map->gate.ys[map->gate.tile_count] = y;
-                    map->gate.tile_count++;
+                if (map->gate_entry.tile_count < MAX_GATE_TILES) {
+                    map->gate_entry.xs[map->gate_entry.tile_count] = x;
+                    map->gate_entry.ys[map->gate_entry.tile_count] = y;
+                    map->gate_entry.tile_count++;
+                }
+                c2 = ' ';
+            }
+            // Detect exit gate ('g')
+            if (c2 == 'g') {
+                if (map->gate_exit.tile_count < MAX_GATE_TILES) {
+                    map->gate_exit.xs[map->gate_exit.tile_count] = x;
+                    map->gate_exit.ys[map->gate_exit.tile_count] = y;
+                    map->gate_exit.tile_count++;
                 }
                 c2 = ' ';
             }
@@ -309,10 +326,19 @@ bool map_is_walkable(const Map *map, int x, int y)
     if (!map_in_bounds(map, x, y))
         return false;
 
-    // Check if this tile is part of the closed gate
-    if (!map->gate.open) {
-        for (int ti = 0; ti < map->gate.tile_count; ++ti) {
-            if (map->gate.xs[ti] == x && map->gate.ys[ti] == y) {
+
+    // Block entry gate tiles if entry gate is closed
+    if (!map->gate_entry.open) {
+        for (int ti = 0; ti < map->gate_entry.tile_count; ++ti) {
+            if (map->gate_entry.xs[ti] == x && map->gate_entry.ys[ti] == y) {
+                return false;
+            }
+        }
+    }
+    // Block exit gate tiles if exit gate is closed
+    if (!map->gate_exit.open) {
+        for (int ti = 0; ti < map->gate_exit.tile_count; ++ti) {
+            if (map->gate_exit.xs[ti] == x && map->gate_exit.ys[ti] == y) {
                 return false;
             }
         }

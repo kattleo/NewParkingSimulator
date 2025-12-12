@@ -110,15 +110,24 @@ void screen_present(const Screen *s, const Map *map, int step)
             // ---------------------------------
 
             // Gate rendering: check if this tile is part of a gate (render before map buffer)
-            // Only one gate
             int is_gate_tile = 0;
             int gate_open = 1;
-            Gate *g = (Gate *)&map->gate;
-            for (int ti = 0; ti < g->tile_count; ++ti) {
-                if (g->xs[ti] == x && g->ys[ti] == y) {
+            // Check entry gate
+            for (int ti = 0; ti < map->gate_entry.tile_count; ++ti) {
+                if (map->gate_entry.xs[ti] == x && map->gate_entry.ys[ti] == y) {
                     is_gate_tile = 1;
-                    gate_open = g->open;
+                    gate_open = map->gate_entry.open;
                     break;
+                }
+            }
+            // Check exit gate (if not already found)
+            if (!is_gate_tile) {
+                for (int ti = 0; ti < map->gate_exit.tile_count; ++ti) {
+                    if (map->gate_exit.xs[ti] == x && map->gate_exit.ys[ti] == y) {
+                        is_gate_tile = 1;
+                        gate_open = map->gate_exit.open;
+                        break;
+                    }
                 }
             }
             if (is_gate_tile) {
