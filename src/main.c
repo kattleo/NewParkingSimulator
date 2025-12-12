@@ -2,12 +2,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+
 #include "map/map.h"
 #include "vehicle/vehicle.h"
 #include "vehicle/vehicle_list.h"
 #include "render/render.h"
 #include "traffic/traffic.h"
 #include "common/direction.h"
+
+typedef struct {
+    int account_balance;
+} Game;
 
 bool assets_init(Map *map)
 {
@@ -42,6 +47,9 @@ int main(void)
 
     VehicleList vehicles;
     vehicle_list_init(&vehicles);
+
+    Game game = {0};
+    game.account_balance = 0;
 
     const int FRAME_DT_MS = 150;
     enum Phase { PHASE_SPAWN, PHASE_WAIT_OPEN, PHASE_OPEN, PHASE_WAIT_CLOSE };
@@ -124,6 +132,26 @@ int main(void)
             screen_draw_vehicle(&screen, &node->vehicle, &map);
         // 3) Present
         screen_present(&screen, &map, step);
+
+        printf("Account Balance: \033[92m%d\033[0m\n", game.account_balance);
+        // --- Stat Board ---
+        printf("\n=== Vehicle Overview ===\n");
+        printf("%-10s %-12s %-12s\n", "VehicleID", "State", "ParkingTime");
+        int vid = 0;
+        for (VehicleNode *node = vehicles.head; node != NULL; node = node->next, ++vid) {
+            const Vehicle *v = &node->vehicle;
+            const char *state_str = "";
+            switch (v->state) {
+                case VEH_DRIVING: state_str = "Driving"; break;
+                case VEH_PARKING: state_str = "Parking"; break;
+                case VEH_PARKED: state_str = "Parked"; break;
+                case VEH_LEAVING: state_str = "Leaving"; break;
+                default: state_str = "Unknown"; break;
+            }
+            // Hardcoded parking time for now
+            int parking_time = 42;
+            printf("%-10d %-12s %-12d\n", vid, state_str, parking_time);
+        }
         // 4) One traffic simulation step (move + path replanning)
         traffic_step(&vehicles, &map);
         usleep(FRAME_DT_MS * 1000);
