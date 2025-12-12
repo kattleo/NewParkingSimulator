@@ -2,7 +2,7 @@
 # Lines starting with # are comments
 
 # --- Smooth mode (default) ---
-frame_dt_ms_smooth = 200
+frame_dt_ms_smooth = 150
 spawn_rate_smooth = 2000
 min_parking_time_smooth = 4
 max_parking_time_smooth = 10
