@@ -32,7 +32,6 @@ bool path_find_with_size(const struct Map *map,
                         int car_width, int car_height,
                         Path *out_path);
 
-// Legacy: single-tile pathfinding (for non-cars)
 bool path_find(const struct Map *map,
                int sx, int sy,
                int gx, int gy,
