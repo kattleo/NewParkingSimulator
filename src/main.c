@@ -109,7 +109,9 @@ int main(void)
         }
     }
 
-    for (int step = 0; step < 500; ++step) {
+    int step = 0;
+    while(1) {
+        step++;
         // State machine for gate/vehicle logic
         switch (phase) {
             case PHASE_SPAWN: {
@@ -190,8 +192,7 @@ int main(void)
         printf("Account Balance: \033[92m%d\033[0m\n", game.account_balance);
         // --- Stat Board ---
         printf("\n=== Vehicle Overview ===\n");
-        printf("%-10s %-12s %-12s\n", "VehicleID", "State", "ParkingTime (s)");
-            printf("%-10s %-12s %-15s %-15s\n", "VehicleID", "State", "ParkingTime (s)", "Remaining (s)");
+        printf("%-10s %-12s %-15s %-15s\n", "VehicleID", "State", "ParkingTime (s)", "Remaining (s)");
         int vid = 0;
         for (VehicleNode *node = vehicles.head; node != NULL; node = node->next, ++vid) {
             Vehicle *v = &node->vehicle;
@@ -361,5 +362,7 @@ int main(void)
     screen_free(&screen);
     map_free(&map);
 
+    // Stop sound
+    system("pkill play");
     return 0;
 }
